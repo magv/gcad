@@ -1,0 +1,32 @@
+[project]
+name = "gcad"
+version = "0.0.1"
+description = "Generic Cylindrical Algebraic Decomposition"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+testing = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow"]
+
+[build-system]
+requires = ["setuptools>=75", "cython>=3.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["gcad", "gcad_c"]
+
+[tool.setuptools.package-data]
+gcad_c = ["shortest_fraction_between.c"]
+
+[[tool.setuptools.ext-modules]]
+name = "gcad_c_ext"
+sources = ["gcad_c/gcad.pyx"]
+libraries = ["flint", "mpfr", "gmp"]
+py-limited-api = true
+
+[tool.distutils.bdist_wheel]
+py-limited-api = "cp310"
