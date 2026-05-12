@@ -31,3 +31,9 @@ def test_shortest_fraction_closer():
     f2 = Fraction(191, 7109)
     f = shortest_fraction_between(f1, f2)
     assert f == Fraction(9, 332)
+
+def test_shortest_fraction_bigint():
+    for k in range(0, 150, 3):
+        f = Fraction(2, 1)**k
+        s = shortest_fraction_between(f, f + 1)
+        assert s == f

@@ -7,7 +7,7 @@ build: phony
 
 clean: phony
 	rm -f gcad_c.*.so gcad_c/gcad.c
-	rm -rf __pycache__/ gcad/__pycache__/
+	rm -rf __pycache__/ gcad/__pycache__/ tests/__pycache__/
 	rm -rf build/ dist/ gcad.egg-info/
 
 dist: phony
