@@ -1,6 +1,17 @@
 # Generic Cylindrical Algebraic Decomposition
 
-# How to use
+Given a list of polynomials in $x_1,…,x_n$, GCAD separates $ℝ^n$
+into *cells* of constant sign of all polynomials, each given as
+
+$$\bigwedge_{1≤i≤n} l_i(x_1,…,x_{i-1}) < x_i < h_i(x_1,…,x_{i-1}),$$
+
+where the boundaries $l_i$ and $h_i$ are either ±∞, or real roots
+of polynomials.
+
+Conventionally, the input polynomials are given as inequalities,
+and only the cells that satisfy inequalities are returned.
+
+## How to use
 
 To decompose $2-x^2-y^2-z^2>0 ∧ 1-x^2-(y-1)^2-z^2>0 ∧ 1-z^2>0$ into cells:
 
@@ -46,3 +57,17 @@ make
 [FLINT]: https://flintlib.org/
 [MPFR]: https://www.mpfr.org/
 [GMP]: https://gmplib.org/
+
+## References
+
+This implementation is based on the work of A. Strzeboński ([S00]).
+The root finding used here is based on the works of A. Akritas,
+A. Strzeboński, and others ([ASV08], [AAS08], [ASV06], [AS05]).
+The handling of rationals and polynomials is done by [FLINT],
+[MPFR], and [GMP].
+
+[S00]: https://doi.org/10.1006/jsco.1999.0327
+[ASV08]: https://doi.org/10.15388/NA.2008.13.3.14557
+[AAS08]: https://doi.org/10.55630/sjc.2008.2.145-162
+[ASV06]: https://doi.org/10.1007/s00607-006-0186-y
+[AS05]: https://doi.org/10.15388/NA.2005.10.4.15110
