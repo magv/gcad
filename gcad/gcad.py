@@ -129,13 +129,13 @@ def isolate_real_roots(
     return roots
 
 def RSFC(
-    inequalities: list[sp.Expr], pr: list[list[sp.Poly]], varlist: list[sp.Symbol]
+    positives: list[sp.Expr], pr: list[list[sp.Poly]], varlist: list[sp.Symbol]
 ) -> list[Cell]:
     """Recursive Solution Formula Construction (Algorithm 3.5)."""
     def _RSFC(k: int, cell: Cell):
         subs = dict(zip(varlist, (ab.point for ab in cell)))
         if k >= len(varlist):
-            if all(sp.sign(eq.subs(subs)) > 0 for eq in inequalities):
+            if all(sp.sign(p.subs(subs)) > 0 for p in positives):
                 all_cells.append(cell)
         else:
             var = varlist[k]
@@ -163,7 +163,27 @@ def RSFC(
     _RSFC(0, [])
     return all_cells
 
-def GCAD(inequalities: list[sp.Expr], varlist: list[sp.Symbol]) -> list[Cell]:
+def relation_to_positives(ex: sp.Expr | list[sp.Expr]) -> list[sp.Expr]:
+    """
+    Turn one or more "<" or ">" relations into a list of positive
+    expressions (i.e. turn a>b into a-b, and a<b into b-a).
+    """
+    result = []
+    def rec(result, ex):
+        if isinstance(ex, sp.StrictGreaterThan):
+            result.append(ex.lhs - ex.rhs)
+        elif isinstance(ex, sp.StrictLessThan):
+            result.append(ex.rhs - ex.lhs)
+        elif isinstance(ex, list):
+            for r in ex: rec(result, r)
+        elif isinstance(ex, sp.And):
+            for r in ex.args: rec(result, r)
+        else:
+            raise ValueError(f"Not a supported relation: {ex}")
+    rec(result, ex)
+    return result
+
+def GCAD(relations: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]) -> list[Cell]:
     """
     Generic Cylindrical Algebraic Decomposition (Algorithm 3.1).
     Take a list of multivariate polynomial inequalities, given as
@@ -172,9 +192,9 @@ def GCAD(inequalities: list[sp.Expr], varlist: list[sp.Symbol]) -> list[Cell]:
     (The list of boundaries from the original algorithm is not
     computed here).
     """
-    assert inequalities
-    pr = GPROJ(inequalities, varlist)
-    cells = RSFC(inequalities, pr, varlist)
+    positives = relation_to_positives(relations)
+    pr = GPROJ(positives, varlist)
+    cells = RSFC(positives, pr, varlist)
     # At this point users of the API should consider merging
     # cells. We don't do that here.
     return cells

@@ -23,7 +23,7 @@ x, y, z = sp.symbols("x y z")
 p1 = 2 - x**2 - y**2 - z**2
 p2 = 1 - x**2 - (y-1)**2 - z**2
 p3 = 1 - z**2
-cells = gcad.merge(gcad.GCAD([p1, p2, p3], [x, y, z]))
+cells = gcad.merge(gcad.GCAD([p1 > 0, p2 > 0, p3 > 0], [x, y, z]))
 for i, cell in enumerate(cells):
     print(f"Cell {i}:")
     for axis in cell:
