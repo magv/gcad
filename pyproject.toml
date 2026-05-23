@@ -3,7 +3,7 @@ name = "gcad"
 version = "0.0.1"
 description = "Generic Cylindrical Algebraic Decomposition"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = ["sympy>=1.13"]
 
 [project.optional-dependencies]
 testing = ["pytest"]

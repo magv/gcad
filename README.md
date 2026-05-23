@@ -43,12 +43,19 @@ Cell 1:
   Root[#^2+x^2+y^2-2, 0] < z < Root[#^2+x^2+y^2-2, 1]
 ```
 
-## How to build
+## How to install
 
-In addition to the Python dependencies specified in `pyproject.toml`,
-you will need [FLINT], [MPFR], and [GMP] development libraries
-installed on your system. Once you have those, build the C
-extension this project uses with:
+You will need a C++ compiler (GCC or Clang), [FLINT], [MPFR],
+and [GMP] development libraries installed on your system. Once
+you have those, you can install this package via
+
+```
+pip install git+https://github.com/magv/gcad/
+```
+
+If you prefer to experiment with the source code, clone the source
+code, install the dependencies listed in `pyproject.toml`, and
+build the library with:
 
 ```
 make
