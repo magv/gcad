@@ -1,2 +1,5 @@
-from .gcad import *
-from gcad_c_ext import shortest_fraction_between
+from .gcad import (
+    GCAD,
+    merge,
+)
+from ._version import __version__

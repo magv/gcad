@@ -1,9 +1,9 @@
 [project]
 name = "gcad"
-version = "0.0.1"
 description = "Generic Cylindrical Algebraic Decomposition"
 requires-python = ">=3.10"
 dependencies = ["sympy>=1.13"]
+dynamic = ["version"]
 
 [project.optional-dependencies]
 testing = ["pytest"]
@@ -13,19 +13,38 @@ testpaths = ["tests"]
 markers = ["slow"]
 
 [build-system]
-requires = ["setuptools>=75", "cython>=3.0"]
+requires = ["setuptools>=75", "cython>=3.1", "setuptools-scm[simple]>=8.1"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools_scm]
+version_file = "gcad/_version.py"
+
 [tool.setuptools]
-packages = ["gcad", "gcad_c"]
+packages = ["gcad", "gcad_ext"]
 
 [tool.setuptools.package-data]
-gcad_c = ["shortest_fraction_between.c"]
+gcad_ext = [
+    "gcad.pyx",
+    "flint_tools.cpp",
+    "root_isolation.cpp",
+    "shortest_fraction_between.cpp",
+]
 
 [[tool.setuptools.ext-modules]]
-name = "gcad_c_ext"
-sources = ["gcad_c/gcad.pyx"]
+name = "gcad_ext"
+sources = ["gcad_ext/gcad.pyx"]
+depends = [
+    "gcad_ext/flint_tools.cpp",
+    "gcad_ext/root_isolation.cpp",
+    "gcad_ext/shortest_fraction_between.cpp",
+]
 libraries = ["flint", "mpfr", "gmp"]
+extra-compile-args = [
+    "-std=c++17",
+    "-Wno-unused-function",
+    "-DPy_LIMITED_API=0x030A0000",
+    "-UNDEBUG",
+]
 py-limited-api = true
 
 [tool.distutils.bdist_wheel]

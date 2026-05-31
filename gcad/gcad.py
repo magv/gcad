@@ -12,9 +12,14 @@ S00:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from sympy import Rational
-from gcad.root_isolation import isolate_many_roots
-from gcad_c_ext import shortest_fraction_between
+from gcad_ext import (
+    discriminant,
+    factor,
+    isolate_many_roots,
+    resultant,
+    shortest_fraction_between,
+)
+#from gcad.root_isolation import isolate_many_roots
 import sympy as sp
 
 @dataclass(slots=True)
@@ -22,8 +27,8 @@ class PolyRoot:
     poly: sp.Poly
     idx: int
     # Isolating interval for the root value at the sample point.
-    value_lo: Rational
-    value_hi: Rational
+    value_lo: sp.Rational
+    value_hi: sp.Rational
     def __repr__(self):
         p = self.poly.as_expr().subs({self.poly.gen: sp.Symbol("#")})
         p = str(p).replace(" ", "").replace("**", "^")
@@ -32,7 +37,7 @@ class PolyRoot:
 @dataclass(slots=True)
 class AxisBound:
     var: sp.Symbol
-    point: Rational # A sample var value inside the cell.
+    point: sp.Rational # A sample var value inside the cell.
     cell_lo: PolyRoot | None # None means negative infinity
     cell_hi: PolyRoot | None # None means positive infinity
     def __repr__(self):
@@ -52,99 +57,117 @@ def uniq(seq: list) -> list:
             result.append(item)
     return result
 
-def SFRP(polys: list[sp.Expr], sym: sp.Symbol) -> list[sp.Poly]:
+def SFRP(polys: list[sp.Expr], variables: list[sp.Symbol]) -> list[sp.Poly]:
     """
     Square-free and relatively prime polynomials multiplicatively
     generating the product of polys, as a poly in the given
     variable. (Definition 3.2)
     """
-    poly_prod = sp.prod(p for p in polys)
-    content, factors = sp.factor_list(poly_prod)
-    assert len(content.free_symbols) == 0
-    polys = uniq(sp.Poly(fac, sym) for fac, _ in factors)
-    polys = [-p if p.LC().is_negative == True else p for p in polys]
-    return polys
+    assert isinstance(polys, list)
+    for p in polys:
+        assert isinstance(p, sp.Poly)
+        assert p.gens == tuple(variables)
+    result = []
+    ff = [factor(p) for p in polys]
+    for content, factors in ff:
+        for poly, exp in factors:
+            assert isinstance(poly, sp.Poly)
+            assert p.domain == sp.ZZ
+            assert poly.gens == tuple(variables)
+            assert poly.LC().is_positive
+            result.append(poly)
+    return uniq(result)
 
-def PR(polys: list[sp.Poly], sym: sp.Symbol) -> list[sp.Expr]:
+def PR(polys: list[sp.Poly], variables: list[sp.Symbol]) -> list[sp.Expr]:
     """
     The set of leading coefficients, discriminants, and pairwise
     resultants of the given list of square-free co-prime
     polynomials, with respect to the given variable (Definition 3.2).
     """
-    for p in polys:
-        # Our polys always come from SFRP(..., sym), and are
-        # already in this variable.
-        assert p.gen == sym
     result = []
     for p in polys:
-        lc = p.LC()
-        assert lc != 0
-        result.append(lc)
-        disc = p.discriminant()
+        if len(variables) > 0:
+            lc = sp.Poly(sp.LC(p, variables[-1]), *variables[:-1])
+            assert lc != 0
+            assert isinstance(lc, sp.Poly)
+            result.append(lc)
+        disc = discriminant(p, len(variables) - 1)
+        disc = sp.Poly(disc, *variables[:-1])
         if disc != 0:
+            assert isinstance(disc, sp.Poly)
             result.append(disc)
     n = len(polys)
     for i in range(n):
         for j in range(i + 1, n):
-            r = polys[i].resultant(polys[j])
+            r = resultant(polys[i], polys[j], len(variables) - 1)
+            r = sp.Poly(r, *variables[:-1])
             if r != 0:
+                assert isinstance(r, sp.Poly)
                 result.append(r)
     return uniq(result)
 
-def GPROJ(polys: list[sp.Expr], varlist: list[sp.Symbol]) -> list[list[sp.Poly]]:
+def GPROJ(positives: list[sp.Poly], varlist: list[sp.Symbol]) -> list[list[sp.Poly]]:
     """
-    Generic projection (Algorithm 3.4).
-    Return [pr_1 ... pr_n]
+    Generic projection (Algorithm 3.4). Return [pr_1 ... pr_n],
+    as polynomials with integer coefficients.
     """
     n = len(varlist)
     # Note: our lists are 0-indexed, unlike the paper.
     F: list[list[sp.Expr]] = [[] for k in range(n)]
     pr: list[list[sp.Poly]] = [[] for k in range(n)]
-    F[n - 1] = polys
-    pr[n - 1] = SFRP(F[n - 1], varlist[n - 1])
+    F[n - 1] = [sp.Poly(p, *varlist) for p in positives]
+    pr[n - 1] = SFRP(F[n - 1], varlist)
     for k in reversed(range(0, n - 1)):
-        F[k] = PR(pr[k + 1], varlist[k + 1])
-        pr[k] = SFRP(F[k], varlist[k])
-    # Filter out constants polys from the projection. These never
+        F[k] = PR(pr[k + 1], varlist[: k + 2])
+        pr[k] = SFRP(F[k], varlist[: k + 1])
+    # Filter out constants polys from the projection: these never
     # have roots, so we can safely skip them.
-    pr = [[p for p in polys if p.degree() >= 1] for polys in pr]
+    pr = [[p for p in polys if p.degree(varlist[k]) >= 1] for k, polys in enumerate(pr)]
     return pr
 
-def isolate_real_roots(
-    k: int, pr: list[list[sp.Poly]], subs: dict, var: sp.Symbol
-) -> list[PolyRoot]:
+def isolate_real_roots(pr: list[sp.Poly], subs: dict, var: sp.Symbol) -> list[PolyRoot]:
     """
     Find all real roots of the given list of square-free
     co-prime polynomials (Algorithm 3.5, step 3).
     """
     intervals = isolate_many_roots(
-        [sp.Poly(p.as_expr().subs(subs), var) for p in pr[k]]
+        [p.subs(subs).clear_denoms(convert=True)[1] for p in pr]
     )
     roots = [
         PolyRoot(p, ridx, lo, hi)
-        for p, i in zip(pr[k], intervals)
+        for p, i in zip(pr, intervals)
         for ridx, (lo, hi) in enumerate(i)
     ]
     roots.sort(key=lambda r: r.value_lo)
     return roots
 
 def RSFC(
-    positives: list[sp.Expr], pr: list[list[sp.Poly]], varlist: list[sp.Symbol]
+    positives: list[sp.Poly], pr: list[list[sp.Poly]], varlist: list[sp.Symbol]
 ) -> list[Cell]:
     """Recursive Solution Formula Construction (Algorithm 3.5)."""
-    def _RSFC(k: int, cell: Cell):
-        subs = dict(zip(varlist, (ab.point for ab in cell)))
+    def _RSFC(cell: Cell, positives: list[sp.Poly]):
+        k = len(cell)
         if k >= len(varlist):
-            if all(sp.sign(p.subs(subs)) > 0 for p in positives):
+            if all(sp.sign(p.as_expr()) > 0 for p in positives):
                 all_cells.append(cell)
         else:
+            # Early exit check.
+            for p in positives:
+                if p.total_degree() <= 0:
+                    if sp.sign(p.as_expr()) < 0:
+                        return
             var = varlist[k]
-            roots = isolate_real_roots(k, pr, subs, var)
+            subs = dict(zip(varlist, (ab.point for ab in cell)))
+            roots = isolate_real_roots(pr[k], subs, var)
             # Get a sample coordinate strictly inside each region
             # (i.e. between the roots), and recurse to the next var.
             if len(roots) > 0:
                 hi = roots[0]
-                _RSFC(k + 1, cell + [AxisBound(var, int(hi.value_lo) - 1, None, hi)])
+                mid = int(hi.value_lo) - 1
+                _RSFC(
+                    cell + [AxisBound(var, mid, None, hi)],
+                    [p.subs({var: mid}) for p in positives],
+                )
                 for i in range(len(roots) - 1):
                     lo = roots[i]
                     hi = roots[i + 1]
@@ -154,34 +177,51 @@ def RSFC(
                         a if lo.value_lo != lo.value_hi else a + (b - a) / 1024,
                         b if hi.value_lo != hi.value_hi else b - (b - a) / 1024,
                     )
-                    _RSFC(k + 1, cell + [AxisBound(var, mid, lo, hi)])
+                    _RSFC(
+                        cell + [AxisBound(var, mid, lo, hi)],
+                        [p.subs({var: mid}) for p in positives],
+                    )
                 lo = roots[-1]
-                _RSFC(k + 1, cell + [AxisBound(var, int(lo.value_hi) + 1, lo, None)])
+                mid = int(lo.value_hi) + 1
+                _RSFC(
+                    cell + [AxisBound(var, mid, lo, None)],
+                    [p.subs({var: mid}) for p in positives],
+                )
             else:
-                _RSFC(k + 1, cell + [AxisBound(var, sp.Rational(0), None, None)])
+                mid = sp.Rational(0)
+                _RSFC(
+                    cell + [AxisBound(var, mid, None, None)],
+                    [p.subs({var: mid}) for p in positives],
+                )
+    positives = [sp.Poly(p, *varlist) for p in positives]
     all_cells = []
-    _RSFC(0, [])
+    _RSFC([], positives)
     return all_cells
 
-def relation_to_positives(ex: sp.Expr | list[sp.Expr]) -> list[sp.Expr]:
+def relation_to_positives(
+    ex: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]
+) -> list[sp.Poly]:
     """
     Turn one or more "<" or ">" relations into a list of positive
     expressions (i.e. turn a>b into a-b, and a<b into b-a).
     """
-    result = []
-    def rec(result, ex):
+    positives = []
+    todo = [ex]
+    while todo:
+        ex = todo.pop()
         if isinstance(ex, sp.StrictGreaterThan):
-            result.append(ex.lhs - ex.rhs)
+            positives.append(ex.lhs - ex.rhs)
         elif isinstance(ex, sp.StrictLessThan):
-            result.append(ex.rhs - ex.lhs)
+            positives.append(ex.rhs - ex.lhs)
         elif isinstance(ex, list):
-            for r in ex: rec(result, r)
+            todo.extend(ex)
         elif isinstance(ex, sp.And):
-            for r in ex.args: rec(result, r)
+            todo.extend(ex.args)
         else:
             raise ValueError(f"Not a supported relation: {ex}")
-    rec(result, ex)
-    return result
+    # We want to consistently have the positives to be multivariate
+    # polynomials in all the variables with integer coefficients.
+    return [sp.Poly(p, *varlist).clear_denoms(convert=True)[1] for p in positives]
 
 def GCAD(relations: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]) -> list[Cell]:
     """
@@ -192,7 +232,7 @@ def GCAD(relations: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]) -> list[C
     (The list of boundaries from the original algorithm is not
     computed here).
     """
-    positives = relation_to_positives(relations)
+    positives = relation_to_positives(relations, varlist)
     pr = GPROJ(positives, varlist)
     cells = RSFC(positives, pr, varlist)
     # At this point users of the API should consider merging

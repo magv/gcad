@@ -35,12 +35,15 @@ import heapq
 import math
 from sympy import Rational, Poly
 
+def sign(r: Rational) -> int:
+    return 0 if r.is_zero else +1 if r.is_positive else -1
+
 def sgc(p: Poly) -> int:
     """
     The number of sign changes in the sequence of nonzero
     coefficients of p.
     """
-    signs = [1 if c > 0 else -1 for c in p.all_coeffs() if c != 0]
+    signs = [sign(c) for c in p.all_coeffs() if c != 0]
     return sum(1 for i in range(1, len(signs)) if signs[i] != signs[i - 1])
 
 def shift(p: Poly, k: int) -> Poly:
@@ -60,12 +63,9 @@ def negate(p: Poly) -> Poly:
     """Find g(x) = p(-x)."""
     return p.compose(Poly(-p.gen, p.gen))
 
-def sign(r: Rational) -> int:
-    return 0 if r.is_zero else +1 if r.is_positive else -1
-
 def nth_root_ub(n: int, c: Rational) -> Rational:
     """
-    Upper bound of the roots of p(x) = x^n + c. I.e. a rational
+    Upper bound of the roots of p(x) = x^n - c. I.e. a rational
     that is larger than, or equal to, c^{1/n}.
     """
     assert c > 0
@@ -94,7 +94,7 @@ def poly_root_ub(p: Poly) -> Rational:
     benchmarked and recommended in ASV08.
     """
     n = p.degree()
-    if n == 0:
+    if n <= 0:
         return Rational(0)
     # p = \sum_{i=0}^{n} cl[i] * x^i
     cl = list(reversed(p.all_coeffs()))
@@ -115,68 +115,57 @@ def poly_root_ub(p: Poly) -> Rational:
                 tmax = tmin
     return tmax
 
-def lower_bound(p: Poly) -> int:
-    """Compute 1 / poly_root_ub(reciprocal_polynomial)."""
-    # Strip trailing zeros (roots at x = 0).
-    work = p
-    while not work.is_zero and work.nth(0) == 0:
-        work = work.quo(Poly(work.gen, work.gen))
-    if work.is_zero or sgc(work) == 0:
-        return 0
-
-    # Reciprocal polynomial: reversed coefficients.
-    rev_poly = Poly(list(reversed(work.all_coeffs())), p.gen)
-    if rev_poly.LC() < 0:
-        rev_poly = -rev_poly
-
-    ub = poly_root_ub(rev_poly)
+def poly_root_lb(p: Poly) -> Rational:
+    """
+    A possibly tight lower bound on the positive roots of the
+    given polynomial, computed as 1/poly_root_ub(x^n p(1/x)).
+    """
+    assert p.nth(0) != 0
+    rev_p = Poly(list(reversed(p.all_coeffs())), p.gen)
+    if rev_p.LC().is_negative:
+        rev_p = -rev_p
+    ub = poly_root_ub(rev_p)
     assert ub > 0
-    # Rounding down to an int here, as ASV08 requests. Keeping
-    # the fractional part is also allowed here, but will not
-    # improve the performance, and integers are shorter. With
-    # this, some exact integer roots will be recognized.
-    return int(1 / ub)
+    return 1/ub
+
+def _intrv(a, b, c, d, p: Poly) -> tuple[Rational, Rational]:
+    """
+    Return the interval (min(b/d, a/c), max(b/d, a/c)). When
+    c=0, the interval is (b/d, ∞), but instead of ∞, we use
+    an upper bound on the roots of p.
+    """
+    v1 = Rational(b, d)
+    if c == 0:
+        # Use poly_root_ub for a finite right endpoint instead of
+        # infinity, as the original algorithm would do. This is
+        # to help with root refinement later. The only concern
+        # is to handle the case of upper bound being exactly the
+        # root, as we want to keep our intervals open.
+        ub = int(poly_root_ub(p)) + 1
+        #assert p.eval(ub) != 0
+        v2 = Rational(a * ub + b, d)
+        assert v1 < v2
+        return (v1, v2)
+    else:
+        v2 = Rational(a, c)
+        return (v1, v2) if v1 <= v2 else (v2, v1)
 
 def isolate_positive_roots(poly: Poly, alpha0: int = 16) -> list[tuple[Rational, Rational]]:
     """
     Isolate all real positive roots of a square-free polynomial
-    with rational coefficients. Return an ordered disjoined list
-    of intervals (a, b), each with a single root. The intervals
-    should be interpreted as open (i.e. the boundaries are
-    excluded), unless a=b.
+    with rational coefficients. Return an ordered disjoined
+    list of intervals (a, b), each with a single root. The
+    intervals should be interpreted as open (i.e. the boundaries
+    are excluded), unless a=b. We assume no roots at zero, and
+    a positive sign of the leading coefficient.
     """
-    # Assuming no root at zero.
+    # Assuming no roots at zero, degree > 1, and positive leading
+    # coefficient.
+    assert poly.degree() > 1
     assert poly.nth(0) != 0
-    # Make the leading coefficient positive.
-    if poly.LC() < 0:
-        poly = -poly
-    s = sgc(poly)
-    def make_interval(b, d, a, c, p: Poly):
-        """
-        Build (lo, hi) from Möbius endpoints b/d and a/c. When
-        c=0 the interval is unbounded above; cap it with an upper
-        bound on p. Endpoints are not ordered (per paper).
-        """
-        v1 = Rational(b, d)
-        if c == 0:
-            # Use poly_root_ub for a finite right endpoint instead of
-            # infinity, as the original algorithm would do. This is
-            # to help with root refinement later. The only concern
-            # is to handle the case of upper bound being exactly the
-            # root, as we want to keep our intervals open.
-            ub1 = int(poly_root_ub(p)) + 1
-            if p.eval(ub1) == 0:
-                # ub is the exact root — return as point interval
-                v = Rational(a * ub1 + b, d)
-                return (v, v)
-            v2 = Rational(a * ub1 + b, d)
-            assert v1 <= v2, f"make_interval c=0: v1={v1} > v2={v2}"
-            return (v1, v2)
-        v2 = Rational(a, c)
-        return (v1, v2) if v1 <= v2 else (v2, v1)
-
-    # --- Step 1 ---
+    assert sign(poly.LC()) > 0
     rootlist: list[tuple[Rational, Rational]] = []
+    s = sgc(poly)
     if s == 0:
         return rootlist
     if s == 1:
@@ -185,99 +174,92 @@ def isolate_positive_roots(poly: Poly, alpha0: int = 16) -> list[tuple[Rational,
         # to help with root refinement later. The only concern
         # is to handle the case of upper bound being exactly the
         # root, as we want to keep our intervals open.
-        ub = int(poly_root_ub(poly)) + 1
-        if poly.eval(ub) == 0:
-            rootlist.append((ub, ub))
-        else:
-            rootlist.append((Rational(0), ub))
+        lo = Rational(0)
+        hi = int(poly_root_ub(poly)) + 1
+        rootlist.append((lo, hi))
         return rootlist
-    # intervalstack stores: (a, b, c, d, p_poly, s)
     intervalstack: list[tuple[int, int, int, int, Poly, int]] = [(1, 0, 0, 1, poly, s)]
-    # --- Step 2 (loop) ---
     while intervalstack:
         a, b, c, d, p, s = intervalstack.pop()
-        # --- Step 3: compute lower bound α on positive roots of p ---
-        alpha = lower_bound(p)
-        # --- Step 4: scale if α is large ---
+        # Rounding down the lower bound to an int, as ASV08
+        # requests. Keeping the fractional part is also allowed
+        # here, but will not improve the performance, and integers
+        # are shorter. With this, some exact integer roots will
+        # be recognized.
+        alpha = int(poly_root_lb(p))
+        # Rescale if lower bound is large.
         if alpha > alpha0:
             p = scale(p, alpha)
             a = alpha * a
             c = alpha * c
             alpha = 1
-        # --- Step 5: shift by α ---
-        step5_extracted = (
-            False  # track if we extracted a root (avoids Step 6 duplication)
-        )
         if alpha >= 1:
+            # Shift by the lower bound to be closer to the root.
             p = shift(p, alpha)
             b = alpha * a + b
             d = alpha * c + d
-            # Check for exact root (alpha equals a root of p)
-            if p.nth(0) == 0:  # p(0) == 0
+            if p.nth(0) == 0:
+                # Exact root at zero. Divide it out.
                 rootlist.append((Rational(b, d), Rational(b, d)))
-                p = p.quo(Poly(p.gen, p.gen))  # divide by x
-                step5_extracted = True
+                p = p.quo(Poly(p.gen, p.gen))
+                # Dividing only once, because p is supposed to
+                # be square-free.
+                assert p.nth(0) != 0
             s = sgc(p)
             if s == 0:
-                continue  # go to Step 2
+                continue
             if s == 1:
-                rootlist.append(make_interval(b, d, a, c, p))
-                continue  # go to Step 2
-        # --- Step 6: split — forward shift p(x+1) and reciprocal transform ---
+                rootlist.append(_intrv(a, b, c, d, p))
+                continue
+        # The root should be close. Let's split the interval at
+        # x=1, and look at both sides:
+        # - p1(x) = p(x+1) will cover x ∈ (1; ∞);
+        # - p2(x) = (x+1)^n p(1/(x+1)) will cover x ∈ (0; 1).
         p1 = shift(p, 1)
         a1, b1, c1, d1 = a, a + b, c, c + d
-        # Track whether forward branch will extract the root at x=1 in p's frame.
-        # p1(0) = p(1), so p1.nth(0) == 0 means root at x = 1.
-        # We need this BEFORE dividing p1 by x, for coordinating with reciprocal branch.
-        # When step5_extracted, the root at x=1 in p's frame was already extracted
-        # in Step 5. The forward shift p(x+1) detects the same root at p1(0)=0.
-        # Skip to avoid duplicate intervals.
-        forward_will_extract = p1.nth(0) == 0 and not step5_extracted
-        if forward_will_extract:
+        if p1.nth(0) == 0:
             rootlist.append((Rational(b1, d1), Rational(b1, d1)))
             p1 = p1.quo(Poly(p1.gen, p1.gen))
+            r = 1
+        else:
+            r = 0
         s1 = sgc(p1)
-        # --- Step 6 (reciprocal branch): handle root at x = 1 before transform ---
-        # p2(0) = p(1) (sum of all coefficients). When p(1) = 0, the reciprocal
-        # transform drops degree, creating spurious roots. Fix: if p(1) = 0,
-        # extract the root first (if not already extracted), then transform p/(x-1).
-        p_sum = p.eval(1)
-        if p_sum == 0:
-            if not forward_will_extract:
-                # Forward branch didn't extract it, so we do.
-                rootval = Rational(a + b, c + d)
-                rootlist.append((rootval, rootval))
-            # Divide p by (x-1) via division, transform the quotient.
-            p_for_recip = p.quo(Poly(p.gen - 1, p.gen))
-        else:
-            p_for_recip = p
-        # Reciprocal transformation: p2(x) = (x+1)^m * p(1/(x+1))
-        p2 = reciprocal_transform(p_for_recip)
-        if p2.LC() < 0:
-            p2 = -p2
+        # The whole s2_bound business is tricky, and only valid
+        # conjecturally. AS05 mentions the conjecture that
+        # sgc(p1)+sgc(p2) <= sgc(p). Here, however, we assume
+        # more: we assume that if s2_bound <= 0, then sgc(p2)
+        # is 0, and that if s2_bound is 1, then sgc(p2) is 1.
+        s2_bound = s - s1 - r
         a2, b2, c2, d2 = b, a + b, d, c + d
-        # p2 should have no leading zeros after the p(1)=0 fix above
-        # --- Step 7: recompute s2 for the reciprocal branch ---
-        if p2.is_zero:
-            s2 = 0
-        else:
+        # By the conjecture above, we can skip the computation
+        # of p2 in some cases.
+        if s2_bound > 1:
+            p2 = reciprocal_transform(p)
+            if p2.LC().is_negative:
+                p2 = -p2
+            if p2.nth(0) == 0:
+                # p2(0) = p1(0) = p(1) = 0. If we are here,
+                # this root was already counted.
+                p2 = p2.quo(Poly(p2.gen, p2.gen))
             s2 = sgc(p2)
-        # --- Step 8: prefer the branch with more sign changes on the left ---
+        else:
+            p2 = None # This value will not be used.
+            s2 = s2_bound
+        # To keep the interval stack small, it's best to push
+        # intervals with higher sgc first.
         if s1 < s2:
             a1, b1, c1, d1, p1, s1, a2, b2, c2, d2, p2, s2 = \
                 a2, b2, c2, d2, p2, s2, a1, b1, c1, d1, p1, s1
-        # --- Step 9: process branch 1 (forward) ---
         if s1 == 0:
-            pass  # no roots in this sub-interval
+            continue
         elif s1 == 1:
-            rootlist.append(make_interval(b1, d1, a1, c1, p1))
+            rootlist.append(_intrv(a1, b1, c1, d1, p1))
         else:
             intervalstack.append((a1, b1, c1, d1, p1, s1))
-        # --- Step 10: process branch 2 (reciprocal) ---
         if s2 == 0:
-            pass
+            continue
         elif s2 == 1:
-            rootlist.append(make_interval(b2, d2, a2, c2, p2))
+            rootlist.append(_intrv(a2, b2, c2, d2, p2))
         else:
             intervalstack.append((a2, b2, c2, d2, p2, s2))
     rootlist.sort()
@@ -291,61 +273,35 @@ def isolate_roots(p: Poly) -> list[tuple[Rational, Rational]]:
     should be interpreted as open (i.e. the boundaries are
     excluded), unless a=b.
     """
+    roots = []
     if p.degree() <= 0:
-        return []
+        return roots
     if p.nth(0) == 0:
         # Divide out the root at zero.
         p = p.quo(Poly(p.gen, p.gen))
-        assert p.nth(0) != 0 # The input should be square-free.
-        roots_zero = [(Rational(0), Rational(0))]
-        if p.degree() <= 0:
-            return roots_zero
-    else:
-        roots_zero = []
-    roots_neg = [(-hi, -lo) for lo, hi in reversed(isolate_positive_roots(negate(p)))]
-    roots_pos = isolate_positive_roots(p)
-    return roots_neg + roots_zero + roots_pos
-
-def bisect_roots(
-    p: Poly, intervals: list[tuple[Rational, Rational]], n: int
-) -> list[tuple[Rational, Rational]]:
-    """
-    Refine real root intervals via bisection, making at least n
-    steps on each side of each root interval.
-    """
-    # Divide out all exact roots from p. This leaves us with
-    # only open intervals.
-    for lo, hi in intervals:
-        if lo == hi:
-            p = p.quo(Poly(p.gen - lo, p.gen))
-    result = []
-    for lo0, hi0 in intervals:
-        if lo0 == hi0:
-            # We've looked at this root already.
-            result.append((lo0, hi0))
-        else:
-            n_left = n_right = 0
-            lo, hi = lo0, hi0
-            sign_lo = sign(p.eval(lo))
-            assert sign_lo != 0
-            while n_left < n or n_right < n:
-                mid = (lo + hi) / 2
-                sign_mid = sign(p.eval(mid))
-                if sign_mid == 0:
-                    # Exact root at mid.
-                    lo = hi = mid
-                    break
-                elif sign_mid != sign_lo:
-                    # Root in (lo, mid) => refine from right.
-                    hi = mid
-                    n_right += 1
-                else:
-                    # Root in (mid, hi) => refine from left.
-                    lo = mid
-                    sign_lo = sign_mid
-                    n_left += 1
-            result.append((lo, hi))
-    return result
+        roots.append((Rational(0), Rational(0)))
+    if p.degree() <= 0:
+        return roots
+    # The input should be square-free.
+    assert p.nth(0) != 0
+    # Special-case linear polys.
+    if p.degree() == 1:
+        v = -p.nth(0)/p.nth(1)
+        roots.append((v, v))
+        return roots
+    # Negative roots.
+    neg_p = negate(p)
+    if neg_p.LC().is_negative:
+        neg_p = -neg_p
+    for (lo, hi) in isolate_positive_roots(neg_p):
+        roots.append((-hi, -lo))
+    roots.reverse()
+    # Positive roots.
+    if p.LC().is_negative:
+        p = -p
+    for (lo, hi) in isolate_positive_roots(p):
+        roots.append((lo, hi))
+    return roots
 
 def bisect_root(p: Poly, lo: Rational, hi: Rational) -> tuple[Rational, Rational]:
     """Refine a real root interval for a given polynomial once."""

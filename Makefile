@@ -6,7 +6,7 @@ build: phony
 	${PYTHON} -c "from setuptools import setup; setup()" build_ext --inplace
 
 clean: phony
-	rm -f gcad_c.*.so gcad_c/gcad.c
+	rm -f gcad_ext.*.so gcad_ext/gcad.c
 	rm -rf __pycache__/ gcad/__pycache__/ tests/__pycache__/
 	rm -rf build/ dist/ gcad.egg-info/
 
@@ -14,10 +14,18 @@ dist: phony
 	${PYTHON} -m build
 	rm -rf gcad.egg-info/
 
-test: phony
-	${PYTHON} -m pytest -m "not slow"
+last-commit-dist: phony
+	mkdir -p dist
+	tmp=$$(mktemp -d) && \
+	    git clone . "$${tmp}/" && \
+	    ${PYTHON} -m build "$${tmp}/" && \
+	    cp -a $${tmp}/dist/* dist/ && \
+	    rm -rf "$${tmp}/"
 
-test-full: phony
-	${PYTHON} -m pytest
+test: build phony
+	${PYTHON} -m pytest -x --full-trace -m "not slow"
+
+test-full: build phony
+	${PYTHON} -m pytest -x --full-trace
 
 phony:;

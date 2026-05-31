@@ -28,6 +28,11 @@ for i, cell in enumerate(cells):
     print(f"Cell {i}:")
     for axis in cell:
         print(f"  {axis.cell_lo} < {axis.var} < {axis.cell_hi}")
+print()
+for i, cell in enumerate(cells):
+    print(f"Cell {i} example point:")
+    for axis in cell:
+        print(f"  {axis.var} = {axis.point}")
 ```
 
 The expected output is:
@@ -41,6 +46,15 @@ Cell 1:
   Root[#+1, 0] < x < Root[#-1, 0]
   Root[#-1, 0] < y < Root[#^2+x^2-2, 1]
   Root[#^2+x^2+y^2-2, 0] < z < Root[#^2+x^2+y^2-2, 1]
+
+Cell 0 example point:
+  x = -7/8
+  y = 2/3
+  z = 0
+Cell 1 example point:
+  x = -7/8
+  y = 17/16
+  z = 0
 ```
 
 ## How to install
@@ -53,13 +67,9 @@ you have those, you can install this package via
 pip install git+https://github.com/magv/gcad/
 ```
 
-If you prefer to experiment with the source code, clone the source
-code, install the dependencies listed in `pyproject.toml`, and
-build the library with:
-
-```
-make
-```
+If you prefer to experiment with the source code, then clone it,
+install the dependencies listed in `pyproject.toml`, and build
+the library with `make`. Run tests with `make test`.
 
 [FLINT]: https://flintlib.org/
 [MPFR]: https://www.mpfr.org/

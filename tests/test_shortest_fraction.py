@@ -1,6 +1,5 @@
-from gcad_c_ext import *
-
 from fractions import Fraction
+from gcad_ext import *
 
 def test_shortest_fraction_zero():
     f1 = Fraction(-1, 3)
