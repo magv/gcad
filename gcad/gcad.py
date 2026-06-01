@@ -21,6 +21,7 @@ from gcad_ext import (
 )
 #from gcad.root_isolation import isolate_many_roots
 import sympy as sp
+from .log import *
 
 @dataclass(slots=True)
 class PolyRoot:
@@ -68,7 +69,8 @@ def SFRP(polys: list[sp.Expr], variables: list[sp.Symbol]) -> list[sp.Poly]:
         assert isinstance(p, sp.Poly)
         assert p.gens == tuple(variables)
     result = []
-    ff = [factor(p) for p in polys]
+    with logblock("factor"):
+        ff = [factor(p) for p in polys]
     for content, factors in ff:
         for poly, exp in factors:
             assert isinstance(poly, sp.Poly)
@@ -91,21 +93,26 @@ def PR(polys: list[sp.Poly], variables: list[sp.Symbol]) -> list[sp.Expr]:
             assert lc != 0
             assert isinstance(lc, sp.Poly)
             result.append(lc)
-        disc = discriminant(p, len(variables) - 1)
-        disc = sp.Poly(disc, *variables[:-1])
+        with logblock(f"discriminant({p.length()}t {p.total_degree()}d)"):
+            disc = discriminant(p, len(variables) - 1)
+            disc = sp.Poly(disc, *variables[:-1])
         if disc != 0:
             assert isinstance(disc, sp.Poly)
             result.append(disc)
     n = len(polys)
     for i in range(n):
+        pi = polys[i]
         for j in range(i + 1, n):
-            r = resultant(polys[i], polys[j], len(variables) - 1)
-            r = sp.Poly(r, *variables[:-1])
+            pj = polys[j]
+            with logblock(f"resultant({pi.length()}t {pi.total_degree()}d, {pj.length()}t {pj.total_degree()}d)"):
+                r = resultant(pi, pj, len(variables) - 1)
+                r = sp.Poly(r, *variables[:-1])
             if r != 0:
                 assert isinstance(r, sp.Poly)
                 result.append(r)
     return uniq(result)
 
+@autolog
 def GPROJ(positives: list[sp.Poly], varlist: list[sp.Symbol]) -> list[list[sp.Poly]]:
     """
     Generic projection (Algorithm 3.4). Return [pr_1 ... pr_n],
@@ -115,11 +122,13 @@ def GPROJ(positives: list[sp.Poly], varlist: list[sp.Symbol]) -> list[list[sp.Po
     # Note: our lists are 0-indexed, unlike the paper.
     F: list[list[sp.Expr]] = [[] for k in range(n)]
     pr: list[list[sp.Poly]] = [[] for k in range(n)]
-    F[n - 1] = [sp.Poly(p, *varlist) for p in positives]
-    pr[n - 1] = SFRP(F[n - 1], varlist)
+    with logblock(f"{varlist[n-1]}"):
+        F[n - 1] = [sp.Poly(p, *varlist) for p in positives]
+        pr[n - 1] = SFRP(F[n - 1], varlist)
     for k in reversed(range(0, n - 1)):
-        F[k] = PR(pr[k + 1], varlist[: k + 2])
-        pr[k] = SFRP(F[k], varlist[: k + 1])
+        with logblock(f"{varlist[k]}"):
+            F[k] = PR(pr[k + 1], varlist[: k + 2])
+            pr[k] = SFRP(F[k], varlist[: k + 1])
     # Filter out constants polys from the projection: these never
     # have roots, so we can safely skip them.
     pr = [[p for p in polys if p.degree(varlist[k]) >= 1] for k, polys in enumerate(pr)]
@@ -141,20 +150,25 @@ def isolate_real_roots(pr: list[sp.Poly], subs: dict, var: sp.Symbol) -> list[Po
     roots.sort(key=lambda r: r.value_lo)
     return roots
 
+@autolog
 def RSFC(
     positives: list[sp.Poly], pr: list[list[sp.Poly]], varlist: list[sp.Symbol]
 ) -> list[Cell]:
     """Recursive Solution Formula Construction (Algorithm 3.5)."""
     def _RSFC(cell: Cell, positives: list[sp.Poly]):
+        nonlocal n_rejected_cells, n_early_exits
         k = len(cell)
         if k >= len(varlist):
             if all(sp.sign(p.as_expr()) > 0 for p in positives):
                 all_cells.append(cell)
+            else:
+                n_rejected_cells += 1
         else:
             # Early exit check.
             for p in positives:
                 if p.total_degree() <= 0:
                     if sp.sign(p.as_expr()) < 0:
+                        n_early_exits[k] += 1
                         return
             var = varlist[k]
             subs = dict(zip(varlist, (ab.point for ab in cell)))
@@ -195,9 +209,14 @@ def RSFC(
                 )
     positives = [sp.Poly(p, *varlist) for p in positives]
     all_cells = []
+    n_rejected_cells = 0
+    n_early_exits = [0] * len(varlist)
     _RSFC([], positives)
+    log(f"Cells: {len(all_cells)} accepted, {n_rejected_cells} rejected")
+    log(f"Early exits: {n_early_exits}")
     return all_cells
 
+@autolog
 def relation_to_positives(
     ex: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]
 ) -> list[sp.Poly]:
@@ -223,6 +242,7 @@ def relation_to_positives(
     # polynomials in all the variables with integer coefficients.
     return [sp.Poly(p, *varlist).clear_denoms(convert=True)[1] for p in positives]
 
+@autolog
 def GCAD(relations: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]) -> list[Cell]:
     """
     Generic Cylindrical Algebraic Decomposition (Algorithm 3.1).
@@ -239,6 +259,7 @@ def GCAD(relations: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]) -> list[C
     # cells. We don't do that here.
     return cells
 
+@autolog
 def merge(cells: list[Cell]) -> list[Cell]:
     """
     Merge adjacent cells (Remark 3.7) using an aggressive merging
@@ -260,6 +281,7 @@ def merge(cells: list[Cell]) -> list[Cell]:
     # merge, no way is more fool-proof than brute force :)
     dim = len(cells[0])
     cells = list(cells)
+    n_merges = [0]*dim
     while True:
         merged = False
         for i in range(len(cells)):
@@ -283,6 +305,8 @@ def merge(cells: list[Cell]) -> list[Cell]:
                     # Mark the cell as absent.
                     cells[j] = None
                     merged = True
+                    n_merges[k] += 1
         cells = [c for c in cells if c is not None]
         if not merged:
+            log(f"Merges: {n_merges}")
             return cells

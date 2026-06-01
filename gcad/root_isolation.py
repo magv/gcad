@@ -31,9 +31,9 @@ AS05:
 
 from __future__ import annotations
 
+from sympy import Rational, Poly
 import heapq
 import math
-from sympy import Rational, Poly
 
 def sign(r: Rational) -> int:
     return 0 if r.is_zero else +1 if r.is_positive else -1

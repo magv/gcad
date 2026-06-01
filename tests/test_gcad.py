@@ -312,7 +312,7 @@ def test_ex44_HT_HB2_HB3():
 def failing_test_ex44_T_C1_B2():
     # Example 4.4 from S00.
     B2 = [1 - (x-1)**2 - (y-1)**2 - (z-1)**2 > 0]
-    C1 = [-x**2 - y**2 - z**2 - 2*y*z + 4*y + 4*z - 3, z - y + 1, y + 1 - z > 0]
+    C1 = [-x**2 - y**2 - z**2 - 2*y*z + 4*y + 4*z - 3 > 0, z - y + 1 > 0, y + 1 - z > 0]
     T = [-z**4 - (2*y**2 + 2*x**2 + 6)*z**2 - y**4 - 2*x**2*y**2 + 10*y**2 - x**4 + 10*x**2 - 9 > 0]
     cells = merge(GCAD(T + C1 + B2, [x, y, z]))
     assert len(cells) == 28 # We get only 19.
@@ -321,7 +321,7 @@ def failing_test_ex44_T_C1_B2():
 def test_ex44_HT_C1_HB2():
     # Example 4.4 from S00.
     B2 = [1 - (x-1)**2 - (y-1)**2 - (z-1)**2 > 0]
-    C1 = [-x**2 - y**2 - z**2 - 2*y*z + 4*y + 4*z - 3, z - y + 1, y + 1 - z > 0]
+    C1 = [-x**2 - y**2 - z**2 - 2*y*z + 4*y + 4*z - 3 > 0, z - y + 1 > 0, y + 1 - z > 0]
     T = [-z**4 - (2*y**2 + 2*x**2 + 6)*z**2 - y**4 - 2*x**2*y**2 + 10*y**2 - x**4 + 10*x**2 - 9 > 0]
     HB2 = B2 + [x + y + z - 3 > 0]
     HT = T + [- x - y > 0]
