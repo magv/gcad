@@ -7,6 +7,12 @@ S00:
     "Solving Systems of Strict Polynomial Inequalities".
     J. Symb. Comput. 29, 471--480 (2000).
     https://doi.org/10.1006/jsco.1999.0327
+
+DSS04:
+    A. Dolzmann, A. Seidl, T. Sturm.
+    "Efficient Projection Orders for CAD".
+    ISSAC '04.
+    https://doi.org/10.1145/1005285.1005303
 """
 
 from __future__ import annotations
@@ -80,7 +86,7 @@ def SFRP(polys: list[sp.Expr], variables: list[sp.Symbol]) -> list[sp.Poly]:
             result.append(poly)
     return uniq(result)
 
-def PR(polys: list[sp.Poly], variables: list[sp.Symbol]) -> list[sp.Expr]:
+def PR(polys: list[sp.Poly], var: sp.Symbol, rest: list[sp.Symbol]) -> list[sp.Expr]:
     """
     The set of leading coefficients, discriminants, and pairwise
     resultants of the given list of square-free co-prime
@@ -88,14 +94,14 @@ def PR(polys: list[sp.Poly], variables: list[sp.Symbol]) -> list[sp.Expr]:
     """
     result = []
     for p in polys:
-        if len(variables) > 0:
-            lc = sp.Poly(sp.LC(p, variables[-1]), *variables[:-1])
+        if len(rest) > 0:
+            lc = sp.Poly(sp.LC(p, var), *rest)
             assert lc != 0
             assert isinstance(lc, sp.Poly)
             result.append(lc)
         with logblock(f"discriminant({p.length()}t {p.total_degree()}d)"):
-            disc = discriminant(p, len(variables) - 1)
-            disc = sp.Poly(disc, *variables[:-1])
+            disc = discriminant(p, p.gens.index(var))
+            disc = sp.Poly(disc, *rest)
         if disc != 0:
             assert isinstance(disc, sp.Poly)
             result.append(disc)
@@ -105,8 +111,8 @@ def PR(polys: list[sp.Poly], variables: list[sp.Symbol]) -> list[sp.Expr]:
         for j in range(i + 1, n):
             pj = polys[j]
             with logblock(f"resultant({pi.length()}t {pi.total_degree()}d, {pj.length()}t {pj.total_degree()}d)"):
-                r = resultant(pi, pj, len(variables) - 1)
-                r = sp.Poly(r, *variables[:-1])
+                r = resultant(pi, pj, pi.gens.index(var))
+                r = sp.Poly(r, *rest)
             if r != 0:
                 assert isinstance(r, sp.Poly)
                 result.append(r)
@@ -120,19 +126,53 @@ def GPROJ(positives: list[sp.Poly], varlist: list[sp.Symbol]) -> list[list[sp.Po
     """
     n = len(varlist)
     # Note: our lists are 0-indexed, unlike the paper.
-    F: list[list[sp.Expr]] = [[] for k in range(n)]
     pr: list[list[sp.Poly]] = [[] for k in range(n)]
     with logblock(f"{varlist[n-1]}"):
-        F[n - 1] = [sp.Poly(p, *varlist) for p in positives]
-        pr[n - 1] = SFRP(F[n - 1], varlist)
+        pr[n - 1] = SFRP([sp.Poly(p, *varlist) for p in positives], varlist)
     for k in reversed(range(0, n - 1)):
         with logblock(f"{varlist[k]}"):
-            F[k] = PR(pr[k + 1], varlist[: k + 2])
-            pr[k] = SFRP(F[k], varlist[: k + 1])
+            pr[k] = SFRP(PR(pr[k + 1], varlist[k + 1], varlist[: k + 1]), varlist[: k + 1])
     # Filter out constants polys from the projection: these never
     # have roots, so we can safely skip them.
     pr = [[p for p in polys if p.degree(varlist[k]) >= 1] for k, polys in enumerate(pr)]
     return pr
+
+@autolog
+def greedy_sotd_order(
+    relations: list[sp.Poly], var_groups: list[list[sp.Symbol]]
+) -> list[sp.Symbol]:
+    """
+    Variable order that greedily minimizes the "sum of total
+    degrees" metric, as advocated in DSS04.
+    """
+    rev_order = []
+    varlist = [v for g in var_groups for v in g]
+    positives = relations_to_positives(relations, varlist)
+    pr = SFRP([sp.Poly(p, *varlist) for p in positives], varlist)
+    for group in reversed(var_groups):
+        while len(group) > 1:
+            n = len(varlist) - len(rev_order)
+            with logblock(f"Var #{n}"):
+                log(f"Searching among {group}")
+                best_sotd = None
+                for var in group:
+                    rest = [v for v in varlist if v is not var]
+                    with logblock(var):
+                        new_pr = SFRP(PR(pr, var, rest), rest)
+                    new_sotd = sum(sum(m) for p in new_pr for m in p.monoms())
+                    if best_sotd is None or new_sotd < best_sotd:
+                        best_var = var
+                        best_pr = new_pr
+                        best_sotd = new_sotd
+                log(f"Best var #{len(varlist) - len(rev_order)}: {best_var}")
+                rev_order.append(best_var)
+                group.remove(best_var)
+                pr = best_pr
+        if len(group) == 1:
+            n = len(varlist) - len(rev_order)
+            log(f"Best var #{n}: {group[0]} (the only remaining)")
+            rev_order.append(group[0])
+    return list(reversed(rev_order))
 
 def isolate_real_roots(pr: list[sp.Poly], subs: dict, var: sp.Symbol) -> list[PolyRoot]:
     """
@@ -217,7 +257,7 @@ def RSFC(
     return all_cells
 
 @autolog
-def relation_to_positives(
+def relations_to_positives(
     ex: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]
 ) -> list[sp.Poly]:
     """
@@ -236,6 +276,8 @@ def relation_to_positives(
             todo.extend(ex)
         elif isinstance(ex, sp.And):
             todo.extend(ex.args)
+        elif ex == True:
+            pass
         else:
             raise ValueError(f"Not a supported relation: {ex}")
     # We want to consistently have the positives to be multivariate
@@ -252,7 +294,7 @@ def GCAD(relations: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]) -> list[C
     (The list of boundaries from the original algorithm is not
     computed here).
     """
-    positives = relation_to_positives(relations, varlist)
+    positives = relations_to_positives(relations, varlist)
     pr = GPROJ(positives, varlist)
     cells = RSFC(positives, pr, varlist)
     # At this point users of the API should consider merging

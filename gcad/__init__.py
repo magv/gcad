@@ -1,8 +1,9 @@
 from .gcad import (
     GCAD,
-    merge,
-    relation_to_positives,
     GPROJ,
+    greedy_sotd_order,
+    merge,
+    relations_to_positives,
     RSFC
 )
 from ._version import __version__

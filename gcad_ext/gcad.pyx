@@ -3,18 +3,19 @@
 
 from cpython.long cimport PyLong_AsLongAndOverflow, PyLong_FromString
 from cpython.unicode cimport PyUnicode_AsUTF8AndSize
+from cython import nogil
 from fractions import Fraction
-from libc.stdlib cimport calloc, free
 from libcpp.vector cimport vector
+from libc.stdlib cimport calloc, free
 from sympy import Poly
 
 # FLINT <-> Python conversion utils
 
-cdef extern from "<flint/flint.h>":
+cdef extern from "<flint/flint.h>" nogil:
     ctypedef int slong
     ctypedef int ulong
 
-cdef extern from "<flint/fmpz.h>":
+cdef extern from "<flint/fmpz.h>" nogil:
     ctypedef int fmpz
     void fmpz_init(fmpz *z)
     void fmpz_clear(fmpz *z)
@@ -24,14 +25,14 @@ cdef extern from "<flint/fmpz.h>":
     long fmpz_get_si(const fmpz *z)
     int fmpz_fits_si(const fmpz *z)
 
-cdef extern from "<flint/fmpq.h>":
+cdef extern from "<flint/fmpq.h>" nogil:
     ctypedef int fmpq
     void fmpq_init(fmpq *q)
     void fmpq_clear(fmpq *q)
     fmpz *fmpq_numref(fmpq *q)
     fmpz *fmpq_denref(fmpq *q)
 
-cdef extern from "<flint/fmpz_poly.h>":
+cdef extern from "<flint/fmpz_poly.h>" nogil:
     ctypedef int fmpz_poly_struct
     void fmpz_poly_init(fmpz_poly_struct *poly)
     void fmpz_poly_clear(fmpz_poly_struct *poly)
@@ -44,7 +45,7 @@ cdef extern from "<flint/fmpz_poly.h>":
     void fmpz_poly_shift_right(fmpz_poly_struct *res, const fmpz_poly_struct *poly, long n)
     fmpz *fmpz_poly_get_coeff_ptr(const fmpz_poly_struct *poly, long n)
 
-cdef extern from "<flint/fmpz_mpoly.h>":
+cdef extern from "<flint/fmpz_mpoly.h>" nogil:
     ctypedef int fmpz_mpoly_struct
     ctypedef int fmpz_mpoly_ctx_struct
     cdef enum:
@@ -65,9 +66,9 @@ cdef extern from "<flint/fmpz_mpoly.h>":
     void fmpz_mpoly_push_term_fmpz_ui(fmpz_mpoly_struct *p, const fmpz *c, const ulong *exp, const fmpz_mpoly_ctx_struct *ctx)
     void fmpz_mpoly_sort_terms(fmpz_mpoly_struct *p, const fmpz_mpoly_ctx_struct *ctx)
     int fmpz_mpoly_discriminant(fmpz_mpoly_struct *R, const fmpz_mpoly_struct *A, slong var, const fmpz_mpoly_ctx_struct *ctx)
-    int fmpz_mpoly_resultant(fmpz_mpoly_struct *R, const fmpz_mpoly_struct *A, const fmpz_mpoly_struct *B, slong var, const fmpz_mpoly_ctx_struct *ctx);
+    int fmpz_mpoly_resultant(fmpz_mpoly_struct *R, const fmpz_mpoly_struct *A, const fmpz_mpoly_struct *B, slong var, const fmpz_mpoly_ctx_struct *ctx)
 
-cdef extern from "<flint/fmpz_mpoly_factor.h>":
+cdef extern from "<flint/fmpz_mpoly_factor.h>" nogil:
     ctypedef int fmpz_mpoly_factor_struct
     void fmpz_mpoly_factor_init(fmpz_mpoly_factor_struct *f, fmpz_mpoly_ctx_struct *ctx)
     void fmpz_mpoly_factor_clear(fmpz_mpoly_factor_struct *f, fmpz_mpoly_ctx_struct *ctx)
@@ -225,7 +226,7 @@ def _identity_multivariate_Poly(poly: object):
 
 # FLINT API
 
-def discriminant(poly: object, varidx: int):
+def discriminant(poly: object, varidx: slong):
     """
     Find a discriminant of a multivariate poly with integer
     coefficients in the variable with the given index.
@@ -237,13 +238,14 @@ def discriminant(poly: object, varidx: int):
     fmpz_mpoly_init(&p, &ctx)
     try:
         fmpz_mpoly_set_sympy_Poly(&p, &ctx, poly)
-        fmpz_mpoly_discriminant(&p, &p, varidx, &ctx)
+        with nogil:
+            fmpz_mpoly_discriminant(&p, &p, varidx, &ctx)
         return fmpz_mpoly_get_sympy_Poly(&p, &ctx, poly.gens)
     finally:
         fmpz_mpoly_clear(&p, &ctx)
         fmpz_mpoly_ctx_clear(&ctx)
 
-def resultant(poly1: object, poly2: object, varidx: int):
+def resultant(poly1: object, poly2: object, varidx: slong):
     """
     Find a resultant of two multivariate polys with integer
     coefficients in the variable with the given index.
@@ -258,7 +260,8 @@ def resultant(poly1: object, poly2: object, varidx: int):
     try:
         fmpz_mpoly_set_sympy_Poly(&p1, &ctx, poly1)
         fmpz_mpoly_set_sympy_Poly(&p2, &ctx, poly2)
-        fmpz_mpoly_resultant(&p1, &p1, &p2, varidx, &ctx)
+        with nogil:
+            fmpz_mpoly_resultant(&p1, &p1, &p2, varidx, &ctx)
         return fmpz_mpoly_get_sympy_Poly(&p1, &ctx, poly1.gens)
     finally:
         fmpz_mpoly_clear(&p1, &ctx)
@@ -283,7 +286,9 @@ def factor(poly: object):
     fmpz_init(&content)
     try:
         fmpz_mpoly_set_sympy_Poly(&mp, &ctx, poly)
-        if fmpz_mpoly_factor(&fac, &mp, &ctx) == 0:
+        with nogil:
+            ok = fmpz_mpoly_factor(&fac, &mp, &ctx)
+        if ok == 0:
             raise RuntimeError("fmpz_mpoly_factor failed")
         fmpz_mpoly_factor_get_constant_fmpz(&content, &fac, &ctx)
         factors = []
@@ -301,20 +306,20 @@ def factor(poly: object):
 
 # API
 
-cdef extern from "shortest_fraction_between.cpp":
+cdef extern from "shortest_fraction_between.cpp" nogil:
     void _shortest_fraction_between "shortest_fraction_between"(fmpq *res, const fmpq *x, const fmpq *y)
 
-cdef extern from "root_isolation.cpp":
+cdef extern from "root_isolation.cpp" nogil:
     ctypedef int ZPoly
     ctypedef int Z
     ctypedef int Q
     ctypedef struct RootInterval:
         Q lo, hi
-    ZPoly ZPoly_of_fmpz_poly(fmpz_poly_struct *p);
-    Z Z_of_fmpz(fmpz *z);
-    Q Q_of_fmpq(fmpq *q);
-    fmpz *Z_to_fmpz(Z &z);
-    fmpq *Q_to_fmpq(Q &z);
+    ZPoly ZPoly_of_fmpz_poly(fmpz_poly_struct *p)
+    Z Z_of_fmpz(fmpz *z)
+    Q Q_of_fmpq(fmpq *q)
+    fmpz *Z_to_fmpz(Z &z)
+    fmpq *Q_to_fmpq(Q &z)
     Q _nth_root_ub "nth_root_ub"(ulong n, const Q &c)
     Q _poly_root_ub "poly_root_ub"(ZPoly &p)
     Q _poly_root_lb "poly_root_lb"(ZPoly &p)
@@ -352,7 +357,8 @@ def isolate_roots(poly: object):
     fmpz_poly_init(&qp)
     try:
         fmpz_poly_set_sympy_Poly(&qp, poly)
-        intervals = _isolate_roots(ZPoly_of_fmpz_poly(&qp))
+        with nogil:
+            intervals = _isolate_roots(ZPoly_of_fmpz_poly(&qp))
         for i in intervals:
             result.append((
                 fmpq_get_py_Fraction(Q_to_fmpq(i.lo)),
@@ -382,7 +388,8 @@ def isolate_many_roots(polys: object):
             cpp_polys.push_back(ZPoly_of_fmpz_poly(&qp))
         finally:
             fmpz_poly_clear(&qp)
-    result_cpp = _isolate_many_roots(cpp_polys)
+    with nogil:
+        result_cpp = _isolate_many_roots(cpp_polys)
     for i in range(result_cpp.size()):
         inner = []
         for ri in result_cpp[i]:
