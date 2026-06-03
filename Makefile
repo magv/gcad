@@ -1,6 +1,6 @@
 PYTHON=python3
 
-all: build
+all: build README.md
 
 build: phony
 	${PYTHON} -c "from setuptools import setup; setup()" build_ext --inplace
@@ -27,5 +27,11 @@ test: build phony
 
 test-full: build phony
 	${PYTHON} -m pytest -x --full-trace
+
+README.md: phony
+	sed '/## API/,$$d' README.md >README.md.tmp
+	printf '## API\n\n' >>README.md.tmp
+	$(PYTHON) mod2md.py >>README.md.tmp
+	mv README.md.tmp README.md
 
 phony:;

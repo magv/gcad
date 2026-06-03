@@ -1,6 +1,6 @@
 """
 Generic Cylindrical Algebraic Decomposition (GCAD),
-as described in S00.
+as described in [S00].
 
 S00:
     A. Strzeboński.
@@ -68,7 +68,7 @@ def SFRP(polys: list[sp.Expr], variables: list[sp.Symbol]) -> list[sp.Poly]:
     """
     Square-free and relatively prime polynomials multiplicatively
     generating the product of polys, as a poly in the given
-    variable. (Definition 3.2)
+    variable. (Definition 3.2 of [S00])
     """
     assert isinstance(polys, list)
     for p in polys:
@@ -89,8 +89,8 @@ def SFRP(polys: list[sp.Expr], variables: list[sp.Symbol]) -> list[sp.Poly]:
 def PR(polys: list[sp.Poly], var: sp.Symbol, rest: list[sp.Symbol]) -> list[sp.Expr]:
     """
     The set of leading coefficients, discriminants, and pairwise
-    resultants of the given list of square-free co-prime
-    polynomials, with respect to the given variable (Definition 3.2).
+    resultants of the given list of square-free co-prime polynomials,
+    with respect to the given variable (Definition 3.2 of [S00]).
     """
     result = []
     for p in polys:
@@ -121,8 +121,8 @@ def PR(polys: list[sp.Poly], var: sp.Symbol, rest: list[sp.Symbol]) -> list[sp.E
 @autolog
 def GPROJ(positives: list[sp.Poly], varlist: list[sp.Symbol]) -> list[list[sp.Poly]]:
     """
-    Generic projection (Algorithm 3.4). Return [pr_1 ... pr_n],
-    as polynomials with integer coefficients.
+    Generic projection (Algorithm 3.4 of [S00]). Return the list
+    of $pr_i$, as polynomials with integer coefficients.
     """
     n = len(varlist)
     # Note: our lists are 0-indexed, unlike the paper.
@@ -139,11 +139,11 @@ def GPROJ(positives: list[sp.Poly], varlist: list[sp.Symbol]) -> list[list[sp.Po
 
 @autolog
 def greedy_sotd_order(
-    relations: list[sp.Poly], var_groups: list[list[sp.Symbol]]
+    relations: sp.Expr | list[sp.Expr], var_groups: list[list[sp.Symbol]]
 ) -> list[sp.Symbol]:
     """
     Variable order that greedily minimizes the "sum of total
-    degrees" metric, as advocated in DSS04.
+    degrees" metric, as advocated in [DSS04].
     """
     rev_order = []
     varlist = [v for g in var_groups for v in g]
@@ -194,7 +194,7 @@ def isolate_real_roots(pr: list[sp.Poly], subs: dict, var: sp.Symbol) -> list[Po
 def RSFC(
     positives: list[sp.Poly], pr: list[list[sp.Poly]], varlist: list[sp.Symbol]
 ) -> list[Cell]:
-    """Recursive Solution Formula Construction (Algorithm 3.5)."""
+    """Recursive Solution Formula Construction (Algorithm 3.5 of [S00])."""
     def _RSFC(cell: Cell, positives: list[sp.Poly]):
         nonlocal n_rejected_cells, n_early_exits
         k = len(cell)
@@ -261,8 +261,8 @@ def relations_to_positives(
     ex: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]
 ) -> list[sp.Poly]:
     """
-    Turn one or more "<" or ">" relations into a list of positive
-    expressions (i.e. turn a>b into a-b, and a<b into b-a).
+    Turn one or more $a>b$ or $a<b$ relations into a list of positive
+    expressions (i.e. turn $a>b$ into $a-b$, and $a<b$ into $b-a$).
     """
     positives = []
     todo = [ex]
@@ -287,12 +287,12 @@ def relations_to_positives(
 @autolog
 def GCAD(relations: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]) -> list[Cell]:
     """
-    Generic Cylindrical Algebraic Decomposition (Algorithm 3.1).
-    Take a list of multivariate polynomial inequalities, given as
-    expressions that are implied to be positive, and decompose
-    the region their conjunction defines into a set of cells.
-    (The list of boundaries from the original algorithm is not
-    computed here).
+    Generic Cylindrical Algebraic Decomposition (Algorithm 3.1 of
+    [S00]). Take a list of multivariate polynomial inequalities,
+    given as expressions that are implied to be positive, and
+    decompose the region their conjunction defines into a set of
+    cells. (The list of boundaries from the original algorithm
+    is not computed here).
     """
     positives = relations_to_positives(relations, varlist)
     pr = GPROJ(positives, varlist)
@@ -304,9 +304,9 @@ def GCAD(relations: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]) -> list[C
 @autolog
 def merge(cells: list[Cell]) -> list[Cell]:
     """
-    Merge adjacent cells (Remark 3.7) using an aggressive merging
-    strategy, merging cells even if the inequalities may not
-    hold at the boundaries between the cells.
+    Merge adjacent cells (Remark 3.7 of [S00]) using an aggressive
+    merging strategy, merging cells even if the inequalities may
+    not hold at the boundaries between the cells.
     """
     if len(cells) == 0:
         return []

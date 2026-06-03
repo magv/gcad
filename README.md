@@ -101,3 +101,52 @@ published by the Free Software Foundation, either [version 3
 of the License], or (at your option) any later version.
 
 [version 3 of the License]: https://www.gnu.org/licenses/gpl-3.0.txt
+
+## API
+
+<a id="gcad.GCAD"></a>
+**GCAD**(relations: *Expr | list[Expr]*, varlist: *list[Symbol]*) → *list[list[[AxisBound](#gcad.AxisBound)]]*
+
+> Generic Cylindrical Algebraic Decomposition (Algorithm 3.1 of
+> [S00]). Take a list of multivariate polynomial inequalities,
+> given as expressions that are implied to be positive, and
+> decompose the region their conjunction defines into a set of
+> cells. (The list of boundaries from the original algorithm
+> is not computed here).
+
+<a id="gcad.GPROJ"></a>
+**GPROJ**(positives: *list[Poly]*, varlist: *list[Symbol]*) → *list[list[Poly]]*
+
+> Generic projection (Algorithm 3.4 of [S00]). Return the list
+> of $pr_i$, as polynomials with integer coefficients.
+
+<a id="gcad.RSFC"></a>
+**RSFC**(positives: *list[Poly]*, pr: *list[list[Poly]]*, varlist: *list[Symbol]*) → *list[list[[AxisBound](#gcad.AxisBound)]]*
+
+> Recursive Solution Formula Construction (Algorithm 3.5 of [S00]).
+
+<a id="gcad.greedy_sotd_order"></a>
+**greedy_sotd_order**(relations: *Expr | list[Expr]*, var_groups: *list[list[Symbol]]*) → *list[Symbol]*
+
+> Variable order that greedily minimizes the "sum of total
+> degrees" metric, as advocated in [DSS04].
+
+<a id="gcad.merge"></a>
+**merge**(cells: *list[list[[AxisBound](#gcad.AxisBound)]]*) → *list[list[[AxisBound](#gcad.AxisBound)]]*
+
+> Merge adjacent cells (Remark 3.7 of [S00]) using an aggressive
+> merging strategy, merging cells even if the inequalities may
+> not hold at the boundaries between the cells.
+
+<a id="gcad.relations_to_positives"></a>
+**relations_to_positives**(ex: *Expr | list[Expr]*, varlist: *list[Symbol]*) → *list[Poly]*
+
+> Turn one or more $a>b$ or $a<b$ relations into a list of positive
+> expressions (i.e. turn $a>b$ into $a-b$, and $a<b$ into $b-a$).
+
+<a id="gcad.AxisBound"></a>
+dataclass **AxisBound**(var: *Symbol*, point: *Rational*, cell_lo: *[PolyRoot](#gcad.PolyRoot) | NoneType*, cell_hi: *[PolyRoot](#gcad.PolyRoot) | NoneType*)
+
+<a id="gcad.PolyRoot"></a>
+dataclass **PolyRoot**(poly: *Poly*, idx: *int*, value_lo: *Rational*, value_hi: *Rational*)
+

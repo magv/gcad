@@ -1,6 +1,7 @@
 import sys
 import time
 import contextlib
+from functools import wraps
 
 __all__ = ("autolog", "log", "logblock")
 
@@ -44,14 +45,13 @@ class Logger:
 LOG = Logger()
 
 def autolog(fn):
+    @wraps(fn)
     def fn_wrapper(*args, **kwargs):
         LOG.push_block(fn.__name__)
         try:
             return fn(*args, **kwargs)
         finally:
             LOG.pop_block()
-    fn_wrapper.__name__ = fn.__name__
-    fn_wrapper.__doc__ = fn.__doc__
     return fn_wrapper
 
 def log(line):
