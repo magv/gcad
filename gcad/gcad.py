@@ -74,9 +74,12 @@ def SFRP(polys: list[sp.Poly], variables: list[sp.Symbol]) -> list[sp.Poly]:
     for p in polys:
         assert isinstance(p, sp.Poly)
         assert p.gens == tuple(variables)
+    n = len(polys)
     result = []
-    with logblock("factor"):
-        ff = [factor(p) for p in polys]
+    ff = []
+    for k, p in enumerate(polys):
+        with logblock(f"{k+1}/{n} factor({p.length()}t {p.total_degree()}d)"):
+            ff.append(factor(p))
     for content, factors in ff:
         for poly, exp in factors:
             assert isinstance(poly, sp.Poly)
@@ -93,24 +96,24 @@ def PR(polys: list[sp.Poly], var: sp.Symbol, rest: list[sp.Symbol]) -> list[sp.E
     with respect to the given variable (Definition 3.2 of [S00]).
     """
     result = []
-    for p in polys:
+    n = len(polys)
+    for k, p in enumerate(polys):
         if len(rest) > 0:
             lc = sp.Poly(sp.LC(p, var), *rest)
             assert lc != 0
             assert isinstance(lc, sp.Poly)
             result.append(lc)
-        with logblock(f"discriminant({p.length()}t {p.total_degree()}d)"):
+        with logblock(f"{k+1}/{n} discriminant({p.length()}t {p.total_degree()}d)"):
             disc = discriminant(p, p.gens.index(var))
             disc = sp.Poly(disc, *rest)
         if disc != 0:
             assert isinstance(disc, sp.Poly)
             result.append(disc)
-    n = len(polys)
     for i in range(n):
         pi = polys[i]
         for j in range(i + 1, n):
             pj = polys[j]
-            with logblock(f"resultant({pi.length()}t {pi.total_degree()}d, {pj.length()}t {pj.total_degree()}d)"):
+            with logblock(f"{n*i+j+1-((i+1)*(i+2)//2)}/{n*(n-1)//2} resultant({pi.length()}t {pi.total_degree()}d, {pj.length()}t {pj.total_degree()}d)"):
                 r = resultant(pi, pj, pi.gens.index(var))
                 r = sp.Poly(r, *rest)
             if r != 0:
