@@ -327,3 +327,13 @@ def test_ex44_HT_C1_HB2():
     HT = T + [- x - y > 0]
     cells = merge(GCAD(HT + C1 + HB2, [x, y, z]))
     assert len(cells) == 0
+
+def test_greedy_sotd_order():
+    # Figure 1 and Figure 2 from DSS04.
+    c1 = (x+3)**2 + (y+1)**2 - 4
+    c2 = (x-3)**2 + (y-1)**2 - 4
+    assert len(GCAD([c1>0,c2>0], [x,y])) == 7
+    assert len(GCAD([c1>0,c2>0], [y,x])) == 9
+    assert greedy_sotd_order([c1>0,c2>0], [[x,y]]) == [x,y]
+    assert greedy_sotd_order([c1>0,c2>0], [[x],[y]]) == [x,y]
+    assert greedy_sotd_order([c1>0,c2>0], [[y],[x]]) == [y,x]
