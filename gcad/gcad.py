@@ -151,6 +151,7 @@ def greedy_sotd_order(
     positives = relations_to_positives(relations, varlist)
     pr = SFRP([sp.Poly(p, *varlist) for p in positives], varlist)
     for group in reversed(var_groups):
+        group = list(group)
         while len(group) > 1:
             n = len(varlist) - len(rev_order)
             with logblock(f"Var #{n}"):
@@ -161,18 +162,24 @@ def greedy_sotd_order(
                     with logblock(var):
                         new_pr = SFRP(PR(pr, var, rest), rest)
                     new_sotd = sum(sum(m) for p in new_pr for m in p.monoms())
-                    if best_sotd is None or new_sotd < best_sotd:
+                    if best_sotd is None or new_sotd <= best_sotd:
                         best_var = var
                         best_pr = new_pr
                         best_sotd = new_sotd
-                log(f"Best var #{len(varlist) - len(rev_order)}: {best_var}")
+                log(f"Best var #{n}: {best_var}")
                 rev_order.append(best_var)
                 group.remove(best_var)
                 pr = best_pr
         if len(group) == 1:
             n = len(varlist) - len(rev_order)
-            log(f"Best var #{n}: {group[0]} (the only remaining)")
-            rev_order.append(group[0])
+            with logblock(f"Var #{n}"):
+                var = group[0]
+                log(f"Best var #{n}: {var} (the only remaining)")
+                if n > 1:
+                    rest = [v for v in varlist if v is not var]
+                    with logblock(var):
+                        pr = SFRP(PR(pr, var, rest), rest)
+                rev_order.append(var)
     return list(reversed(rev_order))
 
 def isolate_real_roots(pr: list[sp.Poly], subs: dict, var: sp.Symbol) -> list[PolyRoot]:
