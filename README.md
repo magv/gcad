@@ -104,49 +104,62 @@ of the License], or (at your option) any later version.
 
 ## API
 
-<a id="gcad.GCAD"></a>
-**GCAD**(relations: *Expr | list[Expr]*, varlist: *list[Symbol]*) → *list[list[[AxisBound](#gcad.AxisBound)]]*
+### Functions
 
-> Generic Cylindrical Algebraic Decomposition (Algorithm 3.1 of
-> [S00]). Take a list of multivariate polynomial inequalities,
-> given as expressions that are implied to be positive, and
-> decompose the region their conjunction defines into a set of
-> cells. (The list of boundaries from the original algorithm
-> is not computed here).
+<a id="gcad.GCAD"></a>
+**GCAD** (relations: *Expr | list[Expr]*, varlist: *list[Symbol]*) → *list[list[[AxisBound](#gcad.AxisBound)]]*
+
+Generic Cylindrical Algebraic Decomposition (Algorithm 3.1 of
+[S00]). Take one or multiple multivariate polynomial
+inequalities, and decompose the region their conjunction
+defines into a set of cells. (The list of boundaries from
+the original algorithm is not computed here).
 
 <a id="gcad.GPROJ"></a>
-**GPROJ**(positives: *list[Poly]*, varlist: *list[Symbol]*) → *list[list[Poly]]*
+**GPROJ** (positives: *list[Poly]*, varlist: *list[Symbol]*) → *list[list[Poly]]*
 
-> Generic projection (Algorithm 3.4 of [S00]). Return the list
-> of $pr_i$, as polynomials with integer coefficients.
+Generic projection (Algorithm 3.4 of [S00]). Return the list
+of $pr_i$, as polynomials with integer coefficients.
 
 <a id="gcad.RSFC"></a>
-**RSFC**(positives: *list[Poly]*, pr: *list[list[Poly]]*, varlist: *list[Symbol]*) → *list[list[[AxisBound](#gcad.AxisBound)]]*
+**RSFC** (positives: *list[Poly]*, pr: *list[list[Poly]]*, varlist: *list[Symbol]*) → *list[list[[AxisBound](#gcad.AxisBound)]]*
 
-> Recursive Solution Formula Construction (Algorithm 3.5 of [S00]).
+Recursive Solution Formula Construction (Algorithm 3.5 of [S00]).
 
 <a id="gcad.greedy_sotd_order"></a>
-**greedy_sotd_order**(relations: *Expr | list[Expr]*, var_groups: *list[list[Symbol]]*) → *list[Symbol]*
+**greedy_sotd_order** (relations: *Expr | list[Expr]*, var_groups: *list[list[Symbol]]*) → *list[Symbol]*
 
-> Variable order that greedily minimizes the "sum of total
-> degrees" metric, as advocated in [DSS04].
+Variable order that greedily minimizes the "sum of total
+degrees" metric, as advocated in [DSS04].
 
 <a id="gcad.merge"></a>
-**merge**(cells: *list[list[[AxisBound](#gcad.AxisBound)]]*) → *list[list[[AxisBound](#gcad.AxisBound)]]*
+**merge** (cells: *list[list[[AxisBound](#gcad.AxisBound)]]*) → *list[list[[AxisBound](#gcad.AxisBound)]]*
 
-> Merge adjacent cells (Remark 3.7 of [S00]) using an aggressive
-> merging strategy, merging cells even if the inequalities may
-> not hold at the boundaries between the cells.
+Merge adjacent cells (Remark 3.7 of [S00]) using an aggressive
+merging strategy, merging cells even if the inequalities may
+not hold at the boundaries between the cells.
 
 <a id="gcad.relations_to_positives"></a>
-**relations_to_positives**(ex: *Expr | list[Expr]*, varlist: *list[Symbol]*) → *list[Poly]*
+**relations_to_positives** (relations: *Expr | list[Expr]*, varlist: *list[Symbol]*) → *list[Poly]*
 
-> Turn one or more $a>b$ or $a<b$ relations into a list of positive
-> expressions (i.e. turn $a>b$ into $a-b$, and $a<b$ into $b-a$).
+Turn one or more $a>b$ or $a<b$ relations into a list of positive
+expressions (i.e. turn $a>b$ into $a-b$, and $a<b$ into $b-a$).
+
+### Classes
 
 <a id="gcad.AxisBound"></a>
-dataclass **AxisBound**(var: *Symbol*, point: *Rational*, cell_lo: *[PolyRoot](#gcad.PolyRoot) | NoneType*, cell_hi: *[PolyRoot](#gcad.PolyRoot) | NoneType*)
+**AxisBound**. Cell boundaries along one axis.
+
+* **var**: *Symbol*. Variable name corresponding to this axis.
+* **point**: *Rational*. A sample var value inside the cell.
+* **cell_lo**: *[PolyRoot](#gcad.PolyRoot) | None*. Lower bounding value. `None` means negative infinity.
+* **cell_hi**: *[PolyRoot](#gcad.PolyRoot) | None*. Higher bounding value. `None` means positive infinity.
 
 <a id="gcad.PolyRoot"></a>
-dataclass **PolyRoot**(poly: *Poly*, idx: *int*, value_lo: *Rational*, value_hi: *Rational*)
+**PolyRoot**. Real root of a polynomial.
+
+* **poly**: *Poly*. Polynomial defining the root.
+* **idx**: *int*. Index of the real root, if roots were ordered by value.
+* **value_lo**: *Rational*. Lower bound on the root's value at the sample point.
+* **value_hi**: *Rational*. Upper bound on the root's value at the sample point.
 

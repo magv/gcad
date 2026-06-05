@@ -31,11 +31,11 @@ from .log import *
 
 @dataclass(slots=True)
 class PolyRoot:
-    poly: sp.Poly
-    idx: int
-    # Isolating interval for the root value at the sample point.
-    value_lo: sp.Rational
-    value_hi: sp.Rational
+    """Real root of a polynomial."""
+    poly: sp.Poly; "Polynomial defining the root."
+    idx: int; "Index of the real root, if roots were ordered by value."
+    value_lo: sp.Rational; "Lower bound on the root's value at the sample point."
+    value_hi: sp.Rational; "Upper bound on the root's value at the sample point."
     def __repr__(self):
         p = self.poly.as_expr().subs({self.poly.gen: sp.Symbol("#")})
         p = str(p).replace(" ", "").replace("**", "^")
@@ -43,10 +43,11 @@ class PolyRoot:
 
 @dataclass(slots=True)
 class AxisBound:
-    var: sp.Symbol
-    point: sp.Rational # A sample var value inside the cell.
-    cell_lo: PolyRoot | None # None means negative infinity
-    cell_hi: PolyRoot | None # None means positive infinity
+    """Cell boundaries along one axis."""
+    var: sp.Symbol; "Variable name corresponding to this axis."
+    point: sp.Rational; "A sample var value inside the cell."
+    cell_lo: PolyRoot | None; "Lower bounding value. `None` means negative infinity."
+    cell_hi: PolyRoot | None; "Higher bounding value. `None` means positive infinity."
     def __repr__(self):
         lo = "-∞" if self.cell_lo is None else str(self.cell_lo)
         hi = "∞" if self.cell_hi is None else str(self.cell_hi)
@@ -258,14 +259,14 @@ def RSFC(
 
 @autolog
 def relations_to_positives(
-    ex: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]
+    relations: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]
 ) -> list[sp.Poly]:
     """
     Turn one or more $a>b$ or $a<b$ relations into a list of positive
     expressions (i.e. turn $a>b$ into $a-b$, and $a<b$ into $b-a$).
     """
     positives = []
-    todo = [ex]
+    todo = [relations]
     while todo:
         ex = todo.pop()
         if isinstance(ex, sp.StrictGreaterThan):
@@ -288,11 +289,10 @@ def relations_to_positives(
 def GCAD(relations: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]) -> list[Cell]:
     """
     Generic Cylindrical Algebraic Decomposition (Algorithm 3.1 of
-    [S00]). Take a list of multivariate polynomial inequalities,
-    given as expressions that are implied to be positive, and
-    decompose the region their conjunction defines into a set of
-    cells. (The list of boundaries from the original algorithm
-    is not computed here).
+    [S00]). Take one or multiple multivariate polynomial
+    inequalities, and decompose the region their conjunction
+    defines into a set of cells. (The list of boundaries from
+    the original algorithm is not computed here).
     """
     positives = relations_to_positives(relations, varlist)
     pr = GPROJ(positives, varlist)

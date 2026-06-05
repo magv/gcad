@@ -3,6 +3,7 @@
 Format the contents of a module as Markdown.
 """
 
+import ast
 import importlib
 import inspect
 import sys
@@ -17,6 +18,20 @@ def strip_indent(text: str) -> str:
             n = len(line) - len(line_lstrip)
             common_n = n if common_n is None else min(common_n, n)
     return "\n".join(line[common_n:] for line in lines).strip()
+
+def class_member_docstrings(typ: type) -> dict[str, str]:
+    docstrings = {}
+    tree = ast.parse(inspect.getsource(typ))
+    prev_el = None
+    for el in tree.body[0].body:
+        match (prev_el, el):
+            case (
+                ast.AnnAssign(target=ast.Name(id=name)),
+                ast.Expr(value=ast.Constant(comment)),
+            ):
+                docstrings[name] = comment
+        prev_el = el
+    return docstrings
 
 # First pass
 
@@ -60,6 +75,8 @@ def wr_type(typ):
         for i, arg in enumerate(typ.__args__):
             if i != 0: wr(" | ")
             wr_type(arg)
+    elif typ == types.NoneType:
+        wr(f"None")
     elif isinstance(typ, type):
         href = HREFS.get(f"{typ.__module__}.{typ.__name__}")
         if href:
@@ -73,9 +90,8 @@ def wr_function(name: str, fun: types.FunctionType, mod: types.ModuleType):
     anchor = IDS.get(f"{fun.__module__}.{fun.__name__}")
     if anchor:
         wr(f"<a id=\"{anchor}\"></a>\n")
-    wr(f"**{name}**(")
+    wr(f"**{name}** (")
     ann = inspect.get_annotations(fun, eval_str=True)
-    doc = fun.__doc__
     for i, (k, v) in enumerate(ann.items()):
         if k == "return": continue
         if i != 0: wr(", ")
@@ -85,21 +101,26 @@ def wr_function(name: str, fun: types.FunctionType, mod: types.ModuleType):
     wr(") → *")
     wr_type(ann['return'])
     wr("*\n\n")
-    for line in strip_indent(doc).splitlines():
-        wr(f"> {line}\n")
+    for line in strip_indent(fun.__doc__).splitlines():
+        wr(f"{line}\n")
     wr("\n")
 
 def wr_dataclass(name: str, typ: type, mod: types.ModuleType):
+    docstrings = class_member_docstrings(typ)
     anchor = IDS.get(f"{typ.__module__}.{typ.__name__}")
     if anchor:
         wr(f"<a id=\"{anchor}\"></a>\n")
-    wr(f"dataclass **{name}**(")
+    doc = strip_indent(typ.__doc__)
+    wr(f"**{name}**. {doc}\n\n")
     for i, (fld, fld_type) in enumerate(inspect.get_annotations(typ, eval_str=True).items()):
-        if i != 0: wr(", ")
-        wr(f"{fld}: *")
+        wr(f"* **{fld}**: *")
         wr_type(fld_type)
         wr("*")
-    wr(f")\n\n")
+        doc = docstrings.get(fld)
+        if doc:
+            wr(f". {doc.strip()}")
+        wr("\n")
+    wr(f"\n")
 
 def wr_class(name: str, typ: type, mod: types.ModuleType):
     anchor = IDS.get(f"{typ.__module__}.{typ.__name__}")
@@ -108,23 +129,26 @@ def wr_class(name: str, typ: type, mod: types.ModuleType):
     wr(f"class **{name}**\n\n")
 
 def wr_module(mod: types.ModuleType):
+    wr("### Functions\n\n")
     for name, value in inspect.getmembers(mod):
         if name.startswith("_"): continue
         if inspect.isfunction(value):
             wr_function(name, value, mod)
+    wr("### Classes\n\n")
     for name, value in inspect.getmembers(mod):
         if name.startswith("_"): continue
-        if inspect.isfunction(value):
-            pass
-        elif inspect.isclass(value):
+        if inspect.isclass(value):
             if hasattr(value, "__dataclass_fields__"):
                 wr_dataclass(name, value, mod)
             else:
                 wr_class(name, value, mod)
-        elif inspect.ismodule(value):
-            pass
-        else:
-            raise ValueError(f"Can't document {mod.__name__}.{name} (a {type(value)})")
+    # Double-check there's nothing else.
+    for name, value in inspect.getmembers(mod):
+        if name.startswith("_"): continue
+        if inspect.isfunction(value): continue
+        if inspect.isclass(value): continue
+        if inspect.ismodule(value): continue
+        raise ValueError(f"Can't document {mod.__name__}.{name} (a {type(value)})")
 
 if __name__ == "__main__":
 
