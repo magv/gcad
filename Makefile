@@ -6,9 +6,11 @@ build: phony
 	${PYTHON} -c "from setuptools import setup; setup()" build_ext --inplace
 
 clean: phony
-	rm -f gcad_ext.*.so gcad_ext/gcad.c
+	rm -f gcad_ext.*.so gcad_ext/gcad.cpp
 	rm -rf __pycache__/ gcad/__pycache__/ tests/__pycache__/
 	rm -rf build/ dist/ gcad.egg-info/
+	rm -f README.md.tmp
+	rm -f gcad/_version.py
 
 dist: phony
 	${PYTHON} -m build
