@@ -92,6 +92,7 @@ of rationals and polynomials is done by [FLINT], [MPFR], and
 [ASV06]: https://doi.org/10.1007/s00607-006-0186-y
 [AS05]: https://doi.org/10.15388/NA.2005.10.4.15110
 [DSS04]: https://doi.org/10.1145/1005285.1005303
+[dRE22]: https://doi.org/10.1007/978-3-031-14788-3_17 
 
 ## License
 
@@ -125,6 +126,12 @@ of $pr_i$, as polynomials with integer coefficients.
 **RSFC** (positives: *list[Poly]*, pr: *list[list[Poly]]*, varlist: *list[Symbol]*) → *list[list[[AxisBound](#gcad.AxisBound)]]*
 
 Recursive Solution Formula Construction (Algorithm 3.5 of [S00]).
+
+<a id="gcad.greedy_mods_order"></a>
+**greedy_mods_order**(relations: *Expr | list[Expr]*, var_groups: *list[list[Symbol]]*) → *list[Symbol]*
+
+> Variable order that greedily minimizes the "multiplication
+> of degree sum" metric, as advocated in [dRE22].
 
 <a id="gcad.greedy_sotd_order"></a>
 **greedy_sotd_order** (relations: *Expr | list[Expr]*, var_groups: *list[list[Symbol]]*) → *list[Symbol]*

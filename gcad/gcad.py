@@ -13,6 +13,14 @@ DSS04:
     "Efficient Projection Orders for CAD".
     ISSAC '04.
     https://doi.org/10.1145/1005285.1005303
+
+dRE22:
+    Tereso del Río, Matthew England.
+    "New heuristic to choose a cylindrical algebraic
+    decomposition variable ordering motivated by
+    complexity analysis".
+    CASC 2022.
+    https://doi.org/10.1007/978-3-031-14788-3_17
 """
 
 from __future__ import annotations
@@ -182,6 +190,51 @@ def greedy_sotd_order(
                     with logblock(var):
                         pr = SFRP(PR(pr, var, rest), rest)
                 rev_order.append(var)
+    return list(reversed(rev_order))
+
+def greedy_mods_order(
+    relations: sp.Expr | list[sp.Expr], var_groups: list[list[sp.Symbol]]
+) -> list[sp.Symbol]:
+    """
+    Variable order that greedily minimizes the "multiplication
+    of degree sum" metric, as advocated in [dRE22].
+    """
+    rev_order = []
+    varlist = [v for g in var_groups for v in g]
+    positives = relations_to_positives(relations, varlist)
+    pr = SFRP([sp.Poly(p, *varlist) for p in positives], varlist)
+    for group in reversed(var_groups):
+        while len(group) > 1:
+            n = len(varlist) - len(rev_order)
+            with logblock(f"Var #{n}"):
+                log(f"Searching among {group}")
+                best_mods = None
+                for var in group:
+                    log(f'{var} {[p.degree(var) for p in pr]} {sum(p.degree(var) for p in pr)}')
+                    new_mods = sum(p.degree(var) for p in pr)
+                    if best_mods is None or new_mods < best_mods:
+                        best_var = var
+                        best_mods = new_mods
+                        # Ideas: If new_mods == best_mods 
+                        # - check individual max degree of polys?
+                        # - check number of polys with max degree?
+                        # - take a set of possibly best and look at next projection?
+                log(f"Best var #{len(varlist) - len(rev_order)}: {best_var}")
+                rev_order.append(best_var)
+                group.remove(best_var)
+                if n > 1: 
+                    rest = [v for v in varlist if v is not best_var]
+                    pr = SFRP(PR(pr, best_var, rest), rest)
+        if len(group) == 1:
+            n = len(varlist) - len(rev_order)
+            best_var = group[0]
+            log(f"Best var #{n}: {best_var} (the only remaining)")
+            rev_order.append(best_var)
+            if n > 1:
+                # Project out variable so it does not appear
+                # when considering next group
+                rest = [v for v in varlist if v is not best_var]
+                pr = SFRP(PR(pr, best_var, rest), rest)
     return list(reversed(rev_order))
 
 def isolate_real_roots(pr: list[sp.Poly], subs: dict, var: sp.Symbol) -> list[PolyRoot]:

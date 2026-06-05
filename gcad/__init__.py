@@ -5,6 +5,7 @@ from .gcad import (
     RSFC,
     merge,
     greedy_sotd_order,
+    greedy_mods_order,
     PolyRoot,
     AxisBound
 )
