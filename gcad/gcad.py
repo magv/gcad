@@ -65,11 +65,10 @@ def uniq(seq: list) -> list:
             result.append(item)
     return result
 
-def SFRP(polys: list[sp.Expr], variables: list[sp.Symbol]) -> list[sp.Poly]:
+def SFRP(polys: list[sp.Poly], variables: list[sp.Symbol]) -> list[sp.Poly]:
     """
     Square-free and relatively prime polynomials multiplicatively
-    generating the product of polys, as a poly in the given
-    variable. (Definition 3.2 of [S00])
+    generating the product of polys. (Definition 3.2 of [S00])
     """
     assert isinstance(polys, list)
     for p in polys:
@@ -359,3 +358,6 @@ def merge(cells: list[Cell]) -> list[Cell]:
         if not merged:
             log(f"Merges: {n_merges}")
             return cells
+
+from gcad_ext import SFRP as _SFRP
+SFRP = autolog(_SFRP)

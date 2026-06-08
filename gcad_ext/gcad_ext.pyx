@@ -327,6 +327,9 @@ cdef extern from "root_isolation.cpp" nogil:
     vector[RootInterval] _isolate_roots "isolate_roots"(ZPoly &poly)
     vector[vector[RootInterval]] _isolate_many_roots "isolate_many_roots"(vector[ZPoly] &polys)
 
+cdef extern from "gcad.cpp" nogil:
+    vector[fmpz_mpoly_struct] _SFRP "SFRP"(vector[fmpz_mpoly_struct] polys, fmpz_mpoly_ctx_struct ctx)
+
 def shortest_fraction_between(a: Fraction, b: Fraction) -> Fraction:
     """Simplest fraction between, or equal to, two rationals."""
     cdef fmpq qa, qb, qres
@@ -399,3 +402,28 @@ def isolate_many_roots(polys: object):
             ))
         result.append(inner)
     return result
+
+def SFRP(polys: list[sp.Poly], variables: list[sp.Symbol]) -> list[sp.Poly]:
+    cdef fmpz_mpoly_ctx_struct ctx
+    cdef vector[fmpz_mpoly_struct] input_polys
+    cdef vector[fmpz_mpoly_struct] result_polys
+    cdef fmpz_mpoly_struct mp
+    nvars = len(variables)
+    fmpz_mpoly_ctx_init(&ctx, nvars, ORD_LEX)
+    try:
+        for poly in polys:
+            fmpz_mpoly_init(&mp, &ctx)
+            fmpz_mpoly_set_sympy_Poly(&mp, &ctx, poly)
+            input_polys.push_back(mp)
+        with nogil:
+            result_polys = _SFRP(input_polys, ctx)
+        return [
+            fmpz_mpoly_get_sympy_Poly(&p, &ctx, variables)
+            for p in result_polys
+        ]
+    finally:
+        for p in input_polys:
+            fmpz_mpoly_clear(&p, &ctx)
+        for p in result_polys:
+            fmpz_mpoly_clear(&p, &ctx)
+        fmpz_mpoly_ctx_clear(&ctx)

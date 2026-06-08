@@ -1,6 +1,6 @@
 # Generated Files
 gcad/_version.py
-gcad_ext/gcad.cpp
+gcad_ext/gcad_ext.cpp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

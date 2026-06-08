@@ -39,17 +39,19 @@ packages = ["gcad", "gcad_ext"]
 
 [tool.setuptools.package-data]
 gcad_ext = [
-    "gcad.pyx",
     "flint_tools.cpp",
+    "gcad.cpp",
+    "gcad_ext.pyx",
     "root_isolation.cpp",
     "shortest_fraction_between.cpp",
 ]
 
 [[tool.setuptools.ext-modules]]
 name = "gcad_ext"
-sources = ["gcad_ext/gcad.pyx"]
+sources = ["gcad_ext/gcad_ext.pyx"]
 depends = [
     "gcad_ext/flint_tools.cpp",
+    "gcad_ext/gcad.cpp",
     "gcad_ext/root_isolation.cpp",
     "gcad_ext/shortest_fraction_between.cpp",
 ]
