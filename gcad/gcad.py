@@ -222,7 +222,7 @@ def greedy_mods_order(
                 log(f"Best var #{len(varlist) - len(rev_order)}: {best_var}")
                 rev_order.append(best_var)
                 group.remove(best_var)
-                if n > 1: 
+                if n > 2: 
                     rest = [v for v in varlist if v is not best_var]
                     pr = SFRP(PR(pr, best_var, rest), rest)
         if len(group) == 1:
