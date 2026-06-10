@@ -97,7 +97,7 @@ def SFRP(polys: list[sp.Poly], variables: list[sp.Symbol]) -> list[sp.Poly]:
             result.append(poly)
     return uniq(result)
 
-def PR(polys: list[sp.Poly], var: sp.Symbol, rest: list[sp.Symbol]) -> list[sp.Expr]:
+def PR(polys: list[sp.Poly], var: sp.Symbol, rest: list[sp.Symbol]) -> list[sp.Poly]:
     """
     The set of leading coefficients, discriminants, and pairwise
     resultants of the given list of square-free co-prime polynomials,
@@ -129,6 +129,9 @@ def PR(polys: list[sp.Poly], var: sp.Symbol, rest: list[sp.Symbol]) -> list[sp.E
                 result.append(r)
     return uniq(result)
 
+def SFRP_PR(polys: list[sp.Poly], var: sp.Symbol, rest: list[sp.Symbol]) -> list[sp.Poly]:
+    return SFRP(PR(polys, var, rest), rest)
+
 @autolog
 def GPROJ(positives: list[sp.Poly], varlist: list[sp.Symbol]) -> list[list[sp.Poly]]:
     """
@@ -136,16 +139,18 @@ def GPROJ(positives: list[sp.Poly], varlist: list[sp.Symbol]) -> list[list[sp.Po
     of $pr_i$, as polynomials with integer coefficients.
     """
     n = len(varlist)
-    # Note: our lists are 0-indexed, unlike the paper.
     pr: list[list[sp.Poly]] = [[] for k in range(n)]
     with logblock(f"{varlist[n-1]}"):
         pr[n - 1] = SFRP([sp.Poly(p, *varlist) for p in positives], varlist)
     for k in reversed(range(0, n - 1)):
         with logblock(f"{varlist[k]}"):
-            pr[k] = SFRP(PR(pr[k + 1], varlist[k + 1], varlist[: k + 1]), varlist[: k + 1])
+            pr[k] = SFRP_PR(pr[k + 1], varlist[k + 1], varlist)
     # Filter out constants polys from the projection: these never
     # have roots, so we can safely skip them.
-    pr = [[p for p in polys if p.degree(varlist[k]) >= 1] for k, polys in enumerate(pr)]
+    pr = [
+        [sp.Poly(p, *varlist[: k + 1]) for p in polys if p.degree(varlist[k]) >= 1]
+        for k, polys in enumerate(pr)
+    ]
     return pr
 
 @autolog
@@ -168,9 +173,8 @@ def greedy_sotd_order(
                 log(f"Searching among {group}")
                 best_sotd = None
                 for var in group:
-                    rest = [v for v in varlist if v is not var]
-                    with logblock(var):
-                        new_pr = SFRP(PR(pr, var, rest), rest)
+                    with logblock(f"{var}"):
+                        new_pr = SFRP_PR(pr, var, varlist)
                     new_sotd = sum(sum(m) for p in new_pr for m in p.monoms())
                     if best_sotd is None or new_sotd <= best_sotd:
                         best_var = var
@@ -186,9 +190,8 @@ def greedy_sotd_order(
                 var = group[0]
                 log(f"Best var #{n}: {var} (the only remaining)")
                 if n > 1:
-                    rest = [v for v in varlist if v is not var]
-                    with logblock(var):
-                        pr = SFRP(PR(pr, var, rest), rest)
+                    with logblock(f"{var}"):
+                        pr = SFRP_PR(pr, var, varlist)
                 rev_order.append(var)
     return list(reversed(rev_order))
 
@@ -415,5 +418,4 @@ def merge(cells: list[Cell]) -> list[Cell]:
             log(f"Merges: {n_merges}")
             return cells
 
-from gcad_ext import SFRP as _SFRP
-SFRP = autolog(_SFRP)
+from gcad_ext import PR, SFRP, SFRP_PR

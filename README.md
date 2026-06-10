@@ -128,10 +128,10 @@ of $pr_i$, as polynomials with integer coefficients.
 Recursive Solution Formula Construction (Algorithm 3.5 of [S00]).
 
 <a id="gcad.greedy_mods_order"></a>
-**greedy_mods_order**(relations: *Expr | list[Expr]*, var_groups: *list[list[Symbol]]*) → *list[Symbol]*
+**greedy_mods_order** (relations: *Expr | list[Expr]*, var_groups: *list[list[Symbol]]*) → *list[Symbol]*
 
-> Variable order that greedily minimizes the "multiplication
-> of degree sum" metric, as advocated in [dRE22].
+Variable order that greedily minimizes the "multiplication
+of degree sum" metric, as advocated in [dRE22].
 
 <a id="gcad.greedy_sotd_order"></a>
 **greedy_sotd_order** (relations: *Expr | list[Expr]*, var_groups: *list[list[Symbol]]*) → *list[Symbol]*

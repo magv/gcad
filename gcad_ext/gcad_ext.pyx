@@ -7,7 +7,7 @@ from cython import nogil
 from fractions import Fraction
 from libcpp.vector cimport vector
 from libc.stdlib cimport calloc, free
-from sympy import Poly
+from sympy import Poly, Symbol
 
 # FLINT <-> Python conversion utils
 
@@ -306,6 +306,12 @@ def factor(poly: object):
 
 # API
 
+cdef extern from "logging.cpp" nogil:
+    void LOG_start()
+    void _logline "logline"(const char *text)
+    double _logline_block_start "logline_block_start"(const char *text)
+    void _logline_block_end "logline_block_end"(double t, const char *text)
+
 cdef extern from "shortest_fraction_between.cpp" nogil:
     void _shortest_fraction_between "shortest_fraction_between"(fmpq *res, const fmpq *x, const fmpq *y)
 
@@ -329,6 +335,17 @@ cdef extern from "root_isolation.cpp" nogil:
 
 cdef extern from "gcad.cpp" nogil:
     vector[fmpz_mpoly_struct] _SFRP "SFRP"(vector[fmpz_mpoly_struct] polys, fmpz_mpoly_ctx_struct ctx)
+    vector[fmpz_mpoly_struct] _PR "PR"(vector[fmpz_mpoly_struct] polys, slong var, fmpz_mpoly_ctx_struct ctx)
+    vector[fmpz_mpoly_struct] _SFRP_PR "SFRP_PR"(vector[fmpz_mpoly_struct] polys, slong var, fmpz_mpoly_ctx_struct ctx)
+
+def logline(text: str):
+    _logline(text.encode("utf-8"))
+
+def logline_block_start(text: str) -> float:
+    return _logline_block_start(text.encode("utf-8"))
+
+def logline_block_end(t: float, text: str):
+    _logline_block_end(t, text.encode("utf-8"))
 
 def shortest_fraction_between(a: Fraction, b: Fraction) -> Fraction:
     """Simplest fraction between, or equal to, two rationals."""
@@ -403,7 +420,7 @@ def isolate_many_roots(polys: object):
         result.append(inner)
     return result
 
-def SFRP(polys: list[sp.Poly], variables: list[sp.Symbol]) -> list[sp.Poly]:
+def SFRP(polys: list[Poly], variables: list[Symbol]) -> list[Poly]:
     cdef fmpz_mpoly_ctx_struct ctx
     cdef vector[fmpz_mpoly_struct] input_polys
     cdef vector[fmpz_mpoly_struct] result_polys
@@ -427,3 +444,57 @@ def SFRP(polys: list[sp.Poly], variables: list[sp.Symbol]) -> list[sp.Poly]:
         for p in result_polys:
             fmpz_mpoly_clear(&p, &ctx)
         fmpz_mpoly_ctx_clear(&ctx)
+
+def PR(polys: list[Poly], var: Symbol, variables: list[Symbol]) -> list[Poly]:
+    cdef fmpz_mpoly_ctx_struct ctx
+    cdef vector[fmpz_mpoly_struct] input_polys
+    cdef vector[fmpz_mpoly_struct] result_polys
+    cdef fmpz_mpoly_struct mp
+    nvars = len(variables)
+    var_idx = variables.index(var)
+    fmpz_mpoly_ctx_init(&ctx, nvars, ORD_LEX)
+    try:
+        for poly in polys:
+            fmpz_mpoly_init(&mp, &ctx)
+            fmpz_mpoly_set_sympy_Poly(&mp, &ctx, poly)
+            input_polys.push_back(mp)
+        with nogil:
+            result_polys = _PR(input_polys, var_idx, ctx)
+        return [
+            fmpz_mpoly_get_sympy_Poly(&p, &ctx, variables)
+            for p in result_polys
+        ]
+    finally:
+        for p in input_polys:
+            fmpz_mpoly_clear(&p, &ctx)
+        for p in result_polys:
+            fmpz_mpoly_clear(&p, &ctx)
+        fmpz_mpoly_ctx_clear(&ctx)
+
+def SFRP_PR(polys: list[Poly], var: Symbol, variables: list[Symbol]) -> list[Poly]:
+    cdef fmpz_mpoly_ctx_struct ctx
+    cdef vector[fmpz_mpoly_struct] input_polys
+    cdef vector[fmpz_mpoly_struct] result_polys
+    cdef fmpz_mpoly_struct mp
+    nvars = len(variables)
+    var_idx = variables.index(var)
+    fmpz_mpoly_ctx_init(&ctx, nvars, ORD_LEX)
+    try:
+        for poly in polys:
+            fmpz_mpoly_init(&mp, &ctx)
+            fmpz_mpoly_set_sympy_Poly(&mp, &ctx, poly)
+            input_polys.push_back(mp)
+        with nogil:
+            result_polys = _SFRP_PR(input_polys, var_idx, ctx)
+        return [
+            fmpz_mpoly_get_sympy_Poly(&p, &ctx, variables)
+            for p in result_polys
+        ]
+    finally:
+        for p in input_polys:
+            fmpz_mpoly_clear(&p, &ctx)
+        for p in result_polys:
+            fmpz_mpoly_clear(&p, &ctx)
+        fmpz_mpoly_ctx_clear(&ctx)
+
+LOG_start()
