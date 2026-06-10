@@ -226,8 +226,7 @@ def greedy_mods_order(
                 rev_order.append(best_var)
                 group.remove(best_var)
                 if n > 2: 
-                    rest = [v for v in varlist if v is not best_var]
-                    pr = SFRP(PR(pr, best_var, rest), rest)
+                    pr = SFRP_PR(pr, best_var, varlist)
         if len(group) == 1:
             n = len(varlist) - len(rev_order)
             best_var = group[0]
@@ -236,8 +235,7 @@ def greedy_mods_order(
             if n > 1:
                 # Project out variable so it does not appear
                 # when considering next group
-                rest = [v for v in varlist if v is not best_var]
-                pr = SFRP(PR(pr, best_var, rest), rest)
+                pr = SFRP_PR(pr, best_var, varlist)
     return list(reversed(rev_order))
 
 def isolate_real_roots(pr: list[sp.Poly], subs: dict, var: sp.Symbol) -> list[PolyRoot]:

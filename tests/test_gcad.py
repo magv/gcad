@@ -337,3 +337,7 @@ def test_greedy_sotd_order():
     assert greedy_sotd_order([c1>0,c2>0], [[x,y]]) == [x,y]
     assert greedy_sotd_order([c1>0,c2>0], [[x],[y]]) == [x,y]
     assert greedy_sotd_order([c1>0,c2>0], [[y],[x]]) == [y,x]
+
+def test_greedy_mods_order():
+    p = x**4*y**2*z + x*y*z + 1
+    assert greedy_mods_order([p>0], [[x,y,z]]) == [x,y,z]
