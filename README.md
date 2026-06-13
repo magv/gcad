@@ -67,6 +67,11 @@ you have those, you can install this package via
 pip install git+https://github.com/magv/gcad/
 ```
 
+If either the desired compiler or the libraries are located in
+a non-standard locations, you can set `CXX`, `CXXFLAGS`, and
+`LDFLAGS` environment variables before attempting installation
+to convey this information to the build system.
+
 If you prefer to experiment with the source code, then clone it,
 install the dependencies listed in `pyproject.toml`, and build
 the library with `make`. Run tests with `make test`.
