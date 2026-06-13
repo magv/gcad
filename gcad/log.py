@@ -1,26 +1,47 @@
+from contextlib import contextmanager
 from functools import wraps
-import contextlib
-import gcad_ext
+from gcad_ext import (
+    log,
+    log_trace_enter,
+    log_trace_exit,
+    trace_enter,
+    trace_exit,
+    trace_progress,
+    trace_text,
+)
 
-__all__ = ("autolog", "log", "logblock")
-
-def autolog(fn):
+def auto_trace(fn):
     @wraps(fn)
     def fn_wrapper(*args, **kwargs):
-        t = gcad_ext.logline_block_start(fn.__name__)
+        trace_enter(fn.__name__)
         try:
             return fn(*args, **kwargs)
         finally:
-            gcad_ext.logline_block_end(t, fn.__name__)
+            trace_exit()
     return fn_wrapper
 
-def log(line):
-    gcad_ext.logline(line)
+def auto_log_trace(fn):
+    @wraps(fn)
+    def fn_wrapper(*args, **kwargs):
+        log_trace_enter(fn.__name__)
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            log_trace_exit()
+    return fn_wrapper
 
-@contextlib.contextmanager
-def logblock(name: str):
-    t = gcad_ext.logline_block_start(name)
+@contextmanager
+def trace(text: str):
+    trace_enter(text)
     try:
         yield
     finally:
-        gcad_ext.logline_block_end(t, name)
+        trace_exit()
+
+@contextmanager
+def log_trace(text: str):
+    log_trace_enter(text)
+    try:
+        yield
+    finally:
+        log_trace_exit()

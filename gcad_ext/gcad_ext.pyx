@@ -5,8 +5,8 @@ from cpython.long cimport PyLong_AsLongAndOverflow, PyLong_FromString
 from cpython.unicode cimport PyUnicode_AsUTF8AndSize
 from cython import nogil
 from fractions import Fraction
-from libcpp.vector cimport vector
 from libc.stdlib cimport calloc, free
+from libcpp.vector cimport vector
 from sympy import Poly, Symbol
 
 # FLINT <-> Python conversion utils
@@ -304,13 +304,28 @@ def factor(poly: object):
         fmpz_mpoly_clear(&mp, &ctx)
         fmpz_mpoly_ctx_clear(&ctx)
 
-# API
+# Logging API
 
 cdef extern from "logging.cpp" nogil:
-    void LOG_start()
-    void _logline "logline"(const char *text)
-    double _logline_block_start "logline_block_start"(const char *text)
-    void _logline_block_end "logline_block_end"(double t, const char *text)
+    void log_start()
+    void log_stop()
+    void _log "log"(const char *fmt, ...)
+    void _trace_enter "trace_enter"(const char *fmt, ...)
+    void _trace_exit "trace_exit"()
+    void _log_trace_enter "log_trace_enter"(const char *fmt, ...)
+    void _log_trace_exit "log_trace_exit"()
+    void _trace_text "trace_text"(const char *fmt, ...)
+    void _trace_progress "trace_progress"(double items_done, double items_total)
+
+def log(text: str): _log("{}", text.encode("utf-8"))
+def trace_enter(text: str): _trace_enter("{}", text.encode("utf-8"))
+def trace_exit(): _trace_exit()
+def log_trace_enter(text: str): _log_trace_enter("{}", text.encode("utf-8"))
+def log_trace_exit(): _log_trace_exit()
+def trace_text(text: str): _trace_text("{}", text.encode("utf-8"))
+def trace_progress(items_done: int|float, items_total: int|float): _trace_progress(items_done, items_total)
+
+# API
 
 cdef extern from "shortest_fraction_between.cpp" nogil:
     void _shortest_fraction_between "shortest_fraction_between"(fmpq *res, const fmpq *x, const fmpq *y)
@@ -337,15 +352,6 @@ cdef extern from "gcad.cpp" nogil:
     vector[fmpz_mpoly_struct] _SFRP "SFRP"(vector[fmpz_mpoly_struct] polys, fmpz_mpoly_ctx_struct ctx)
     vector[fmpz_mpoly_struct] _PR "PR"(vector[fmpz_mpoly_struct] polys, slong var, fmpz_mpoly_ctx_struct ctx)
     vector[fmpz_mpoly_struct] _SFRP_PR "SFRP_PR"(vector[fmpz_mpoly_struct] polys, slong var, fmpz_mpoly_ctx_struct ctx)
-
-def logline(text: str):
-    _logline(text.encode("utf-8"))
-
-def logline_block_start(text: str) -> float:
-    return _logline_block_start(text.encode("utf-8"))
-
-def logline_block_end(t: float, text: str):
-    _logline_block_end(t, text.encode("utf-8"))
 
 def shortest_fraction_between(a: Fraction, b: Fraction) -> Fraction:
     """Simplest fraction between, or equal to, two rationals."""
@@ -497,4 +503,4 @@ def SFRP_PR(polys: list[Poly], var: Symbol, variables: list[Symbol]) -> list[Pol
             fmpz_mpoly_clear(&p, &ctx)
         fmpz_mpoly_ctx_clear(&ctx)
 
-LOG_start()
+log_start()

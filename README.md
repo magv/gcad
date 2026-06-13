@@ -9,7 +9,7 @@ where the boundaries $l_i$ and $h_i$ are either ±∞, or real roots
 of polynomials.
 
 Conventionally, the input polynomials are given as inequalities,
-and only the cells that satisfy inequalities are returned.
+and only the cells that satisfy them are returned.
 
 ## How to use
 
@@ -82,9 +82,9 @@ the library with `make`. Run tests with `make test`.
 This implementation is based on the work of A. Strzeboński ([S00]).
 The root finding used here is based on the works of A. Akritas,
 A. Strzeboński, and others ([ASV08], [AAS08], [ASV06], [AS05]).
-The variable ordering heuristic is from [DSS04]. The handling
-of rationals and polynomials is done by [FLINT], [MPFR], and
-[GMP].
+The variable ordering heuristics are from [DSS04] and [dRE22].
+The handling of rationals and polynomials is done by [FLINT],
+[MPFR], and [GMP].
 
 [S00]: https://doi.org/10.1006/jsco.1999.0327
 [ASV08]: https://doi.org/10.15388/NA.2008.13.3.14557

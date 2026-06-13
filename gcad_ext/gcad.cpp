@@ -26,7 +26,7 @@ using Cell = vector<AxisBound>;
 static vector<fmpz_mpoly_struct>
 SFRP(const vector<fmpz_mpoly_struct> &polys, const fmpz_mpoly_ctx_struct &ctx)
 {
-    LOGBLOCK("SFRP({}p)", polys.size());
+    trace_scope("SFRP({}p)", polys.size());
     vector<fmpz_mpoly_struct> result;
     auto cmp = [&](const fmpz_mpoly_struct &a,
                    const fmpz_mpoly_struct &b) -> bool {
@@ -35,19 +35,29 @@ SFRP(const vector<fmpz_mpoly_struct> &polys, const fmpz_mpoly_ctx_struct &ctx)
     set<fmpz_mpoly_struct, decltype(cmp)> result_set(cmp);
     fmpz_mpoly_factor_struct fac;
     fmpz_mpoly_factor_init(&fac, &ctx);
-    for (const auto &poly : polys) {
+    size_t npolys = polys.size();
+    double total_C = 0;
+    for (size_t i = 0; i < npolys; i++) {
+        const auto &poly = polys[npolys-1-i];
+        double d = fmpz_mpoly_total_degree_si(&poly, &ctx);
+        total_C += d*d*d*d;
+    }
+    double C = 0;
+    trace_progress(C, total_C);
+    for (size_t i = 0; i < npolys; i++) {
+        const auto &poly = polys[npolys-1-i];
+        double d = fmpz_mpoly_total_degree_si(&poly, &ctx);
+        slong t = fmpz_mpoly_length(&poly, &ctx);
         {
-            LOGBLOCK("{}/{}: factor({}t {}d)",
-                     &poly - &polys[0] + 1,
-                     polys.size(),
-                     fmpz_mpoly_length(&poly, &ctx),
-                     fmpz_mpoly_total_degree_si(&poly, &ctx));
+            trace_scope("factor({}t {}d)", t, (slong)d);
             int ok = fmpz_mpoly_factor(&fac, &poly, &ctx);
             assert(ok);
         }
+        C += d*d*d*d;
+        trace_progress(C, total_C);
         slong len = fmpz_mpoly_factor_length(&fac, &ctx);
-        for (slong i = 0; i < len; i++) {
-            fmpz_mpoly_struct &f = fac.poly[i];
+        for (slong j = 0; j < len; j++) {
+            fmpz_mpoly_struct &f = fac.poly[j];
             if (result_set.count(f) == 0) {
                 fmpz_mpoly_struct r;
                 fmpz_mpoly_init(&r, &ctx);
@@ -86,7 +96,7 @@ PR(const vector<fmpz_mpoly_struct> &polys,
    slong var,
    fmpz_mpoly_ctx_struct &ctx)
 {
-    LOGBLOCK("PR({}p)", polys.size());
+    trace_scope("PR({}p)", polys.size());
     vector<fmpz_mpoly_struct> result;
     auto cmp = [&](const fmpz_mpoly_struct &a,
                    const fmpz_mpoly_struct &b) -> bool {
@@ -105,35 +115,63 @@ PR(const vector<fmpz_mpoly_struct> &polys,
     size_t npolys = polys.size();
     fmpz_mpoly_struct res;
     fmpz_mpoly_init(&res, &ctx);
-    for (size_t i = 0, idx = 1; i < npolys; i++, idx++) {
-        const auto &p1 = polys[i];
+    // First pass: complexity analysis.
+    double total_C = 0;
+    for (size_t i = 0; i < npolys; i++) {
+        const auto &p1 = polys[npolys-1-i];
         if (fmpz_mpoly_is_fmpz(&p1, &ctx)) continue;
-        LC(res, p1, var, ctx);
-        add(res);
-        if (fmpz_mpoly_degree_si(&p1, var, &ctx) >= 1) {
-            LOGBLOCK("{}/{}: discriminant({}t {}d)",
-                     idx,
-                     npolys*(npolys+1)/2,
-                     fmpz_mpoly_length(&p1, &ctx),
-                     fmpz_mpoly_total_degree_si(&p1, &ctx));
-            int ok = fmpz_mpoly_discriminant(&res, &p1, var, &ctx);
-            assert(ok);
-            add(res);
+        double d1 = fmpz_mpoly_degree_si(&p1, var, &ctx);
+        double t1 = fmpz_mpoly_length(&p1, &ctx);
+        if (d1 >= 1) {
+            total_C += 8*d1*d1*d1*t1*t1;
         }
         for (size_t j = i + 1; j < npolys; j++) {
-            idx++;
-            const auto &p2 = polys[j];
+            const auto &p2 = polys[npolys-1-j];
             if (fmpz_mpoly_is_fmpz(&p2, &ctx)) continue;
-            LOGBLOCK("{}/{}: resultant({}t {}d, {}t {}d)",
-                     idx,
-                     npolys*(npolys+1)/2,
-                     fmpz_mpoly_length(&p1, &ctx),
-                     fmpz_mpoly_total_degree_si(&p1, &ctx),
-                     fmpz_mpoly_length(&p2, &ctx),
-                     fmpz_mpoly_total_degree_si(&p2, &ctx));
-            int ok = fmpz_mpoly_resultant(&res, &p1, &p2, var, &ctx);
-            assert(ok);
-            add(res);
+            double d2 = fmpz_mpoly_degree_si(&p2, var, &ctx);
+            double t2 = fmpz_mpoly_length(&p2, &ctx);
+            total_C += (d1+d2)*(d1+d2)*(d1+d2)*t1*t2;
+        }
+    }
+    // Second pass: actual calculation.
+    double C = 0;
+    trace_progress(C, total_C);
+    for (size_t i = 0; i < npolys; i++) {
+        const auto &p1 = polys[npolys-1-i];
+        if (fmpz_mpoly_is_fmpz(&p1, &ctx)) continue;
+        double d1 = fmpz_mpoly_degree_si(&p1, var, &ctx);
+        double t1 = fmpz_mpoly_length(&p1, &ctx);
+        LC(res, p1, var, ctx);
+        add(res);
+        if (d1 >= 1) {
+            {
+                trace_scope("discriminant({}t {}d)",
+                            fmpz_mpoly_length(&p1, &ctx),
+                            fmpz_mpoly_total_degree_si(&p1, &ctx));
+                int ok = fmpz_mpoly_discriminant(&res, &p1, var, &ctx);
+                assert(ok);
+                add(res);
+            }
+            C += 8*d1*d1*d1*t1*t1;
+            trace_progress(C, total_C);
+        }
+        for (size_t j = i + 1; j < npolys; j++) {
+            const auto &p2 = polys[npolys-1-j];
+            if (fmpz_mpoly_is_fmpz(&p2, &ctx)) continue;
+            double d2 = fmpz_mpoly_degree_si(&p2, var, &ctx);
+            double t2 = fmpz_mpoly_length(&p2, &ctx);
+            {
+                trace_scope("resultant({}t {}d, {}t {}d)",
+                            fmpz_mpoly_length(&p1, &ctx),
+                            fmpz_mpoly_total_degree_si(&p1, &ctx),
+                            fmpz_mpoly_length(&p2, &ctx),
+                            fmpz_mpoly_total_degree_si(&p2, &ctx));
+                int ok = fmpz_mpoly_resultant(&res, &p1, &p2, var, &ctx);
+                assert(ok);
+                add(res);
+            }
+            C += (d1+d2)*(d1+d2)*(d1+d2)*t1*t2;
+            trace_progress(C, total_C);
         }
     }
     fmpz_mpoly_clear(&res, &ctx);

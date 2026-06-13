@@ -86,7 +86,7 @@ def SFRP(polys: list[sp.Poly], variables: list[sp.Symbol]) -> list[sp.Poly]:
     result = []
     ff = []
     for k, p in enumerate(polys):
-        with logblock(f"{k+1}/{n} factor({p.length()}t {p.total_degree()}d)"):
+        with trace(f"{k+1}/{n} factor({p.length()}t {p.total_degree()}d)"):
             ff.append(factor(p))
     for content, factors in ff:
         for poly, exp in factors:
@@ -111,7 +111,7 @@ def PR(polys: list[sp.Poly], var: sp.Symbol, rest: list[sp.Symbol]) -> list[sp.P
             assert lc != 0
             assert isinstance(lc, sp.Poly)
             result.append(lc)
-        with logblock(f"{k+1}/{n} discriminant({p.length()}t {p.total_degree()}d)"):
+        with trace(f"{k+1}/{n} discriminant({p.length()}t {p.total_degree()}d)"):
             disc = discriminant(p, p.gens.index(var))
             disc = sp.Poly(disc, *rest)
         if disc != 0:
@@ -121,7 +121,7 @@ def PR(polys: list[sp.Poly], var: sp.Symbol, rest: list[sp.Symbol]) -> list[sp.P
         pi = polys[i]
         for j in range(i + 1, n):
             pj = polys[j]
-            with logblock(f"{n*i+j+1-((i+1)*(i+2)//2)}/{n*(n-1)//2} resultant({pi.length()}t {pi.total_degree()}d, {pj.length()}t {pj.total_degree()}d)"):
+            with trace(f"{n*i+j+1-((i+1)*(i+2)//2)}/{n*(n-1)//2} resultant({pi.length()}t {pi.total_degree()}d, {pj.length()}t {pj.total_degree()}d)"):
                 r = resultant(pi, pj, pi.gens.index(var))
                 r = sp.Poly(r, *rest)
             if r != 0:
@@ -129,10 +129,13 @@ def PR(polys: list[sp.Poly], var: sp.Symbol, rest: list[sp.Symbol]) -> list[sp.P
                 result.append(r)
     return uniq(result)
 
-def SFRP_PR(polys: list[sp.Poly], var: sp.Symbol, rest: list[sp.Symbol]) -> list[sp.Poly]:
-    return SFRP(PR(polys, var, rest), rest)
+def SFRP_PR(
+    polys: list[sp.Poly], var: sp.Symbol, varlist: list[sp.Symbol]
+) -> list[sp.Poly]:
+    """Same as SFRP(PR(polys, var, varlist), varlist)."""
+    return SFRP(PR(polys, var, varlist), varlist)
 
-@autolog
+@auto_log_trace
 def GPROJ(positives: list[sp.Poly], varlist: list[sp.Symbol]) -> list[list[sp.Poly]]:
     """
     Generic projection (Algorithm 3.4 of [S00]). Return the list
@@ -140,10 +143,10 @@ def GPROJ(positives: list[sp.Poly], varlist: list[sp.Symbol]) -> list[list[sp.Po
     """
     n = len(varlist)
     pr: list[list[sp.Poly]] = [[] for k in range(n)]
-    with logblock(f"{varlist[n-1]}"):
+    with trace(f"{varlist[n-1]}"):
         pr[n - 1] = SFRP([sp.Poly(p, *varlist) for p in positives], varlist)
     for k in reversed(range(0, n - 1)):
-        with logblock(f"{varlist[k]}"):
+        with trace(f"{varlist[k]}"):
             pr[k] = SFRP_PR(pr[k + 1], varlist[k + 1], varlist)
     # Filter out constants polys from the projection: these never
     # have roots, so we can safely skip them.
@@ -153,7 +156,7 @@ def GPROJ(positives: list[sp.Poly], varlist: list[sp.Symbol]) -> list[list[sp.Po
     ]
     return pr
 
-@autolog
+@auto_log_trace
 def greedy_sotd_order(
     relations: sp.Expr | list[sp.Expr], var_groups: list[list[sp.Symbol]]
 ) -> list[sp.Symbol]:
@@ -164,16 +167,17 @@ def greedy_sotd_order(
     rev_order = []
     varlist = [v for g in var_groups for v in g]
     positives = relations_to_positives(relations, varlist)
+    trace_progress(0, len(varlist))
     pr = SFRP([sp.Poly(p, *varlist) for p in positives], varlist)
     for group in reversed(var_groups):
         group = list(group)
+        log(f"Searching among {group}")
         while len(group) > 1:
             n = len(varlist) - len(rev_order)
-            with logblock(f"Var #{n}"):
-                log(f"Searching among {group}")
+            with trace(f"Var #{n}"):
                 best_sotd = None
                 for var in group:
-                    with logblock(f"{var}"):
+                    with trace(f"Trying {var}"):
                         new_pr = SFRP_PR(pr, var, varlist)
                     new_sotd = sum(sum(m) for p in new_pr for m in p.monoms())
                     if best_sotd is None or new_sotd <= best_sotd:
@@ -184,17 +188,20 @@ def greedy_sotd_order(
                 rev_order.append(best_var)
                 group.remove(best_var)
                 pr = best_pr
+            trace_progress(len(rev_order), len(varlist))
         if len(group) == 1:
             n = len(varlist) - len(rev_order)
-            with logblock(f"Var #{n}"):
+            with trace(f"Var #{n}"):
                 var = group[0]
                 log(f"Best var #{n}: {var} (the only remaining)")
                 if n > 1:
-                    with logblock(f"{var}"):
+                    with trace(f"{var}"):
                         pr = SFRP_PR(pr, var, varlist)
                 rev_order.append(var)
+            trace_progress(len(rev_order), len(varlist))
     return list(reversed(rev_order))
 
+@auto_log_trace
 def greedy_mods_order(
     relations: sp.Expr | list[sp.Expr], var_groups: list[list[sp.Symbol]]
 ) -> list[sp.Symbol]:
@@ -205,12 +212,13 @@ def greedy_mods_order(
     rev_order = []
     varlist = [v for g in var_groups for v in g]
     positives = relations_to_positives(relations, varlist)
+    trace_progress(0, len(varlist))
     pr = SFRP([sp.Poly(p, *varlist) for p in positives], varlist)
     for group in reversed(var_groups):
+        log(f"Searching among {group}")
         while len(group) > 1:
             n = len(varlist) - len(rev_order)
-            with logblock(f"Var #{n}"):
-                log(f"Searching among {group}")
+            with trace(f"Var #{n}"):
                 best_mods = None
                 for var in group:
                     log(f'{var} {[p.degree(var) for p in pr]} {sum(p.degree(var) for p in pr)}')
@@ -227,6 +235,7 @@ def greedy_mods_order(
                 group.remove(best_var)
                 if n > 2: 
                     pr = SFRP_PR(pr, best_var, varlist)
+            trace_progress(len(rev_order), len(varlist))
         if len(group) == 1:
             n = len(varlist) - len(rev_order)
             best_var = group[0]
@@ -236,6 +245,7 @@ def greedy_mods_order(
                 # Project out variable so it does not appear
                 # when considering next group
                 pr = SFRP_PR(pr, best_var, varlist)
+            trace_progress(len(rev_order), len(varlist))
     return list(reversed(rev_order))
 
 def isolate_real_roots(pr: list[sp.Poly], subs: dict, var: sp.Symbol) -> list[PolyRoot]:
@@ -254,7 +264,7 @@ def isolate_real_roots(pr: list[sp.Poly], subs: dict, var: sp.Symbol) -> list[Po
     roots.sort(key=lambda r: r.value_lo)
     return roots
 
-@autolog
+@auto_log_trace
 def RSFC(
     positives: list[sp.Poly], pr: list[list[sp.Poly]], varlist: list[sp.Symbol]
 ) -> list[Cell]:
@@ -320,7 +330,7 @@ def RSFC(
     log(f"Early exits: {n_early_exits}")
     return all_cells
 
-@autolog
+@auto_trace
 def relations_to_positives(
     relations: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]
 ) -> list[sp.Poly]:
@@ -348,7 +358,7 @@ def relations_to_positives(
     # polynomials in all the variables with integer coefficients.
     return [sp.Poly(p, *varlist).clear_denoms(convert=True)[1] for p in positives]
 
-@autolog
+@auto_log_trace
 def GCAD(relations: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]) -> list[Cell]:
     """
     Generic Cylindrical Algebraic Decomposition (Algorithm 3.1 of
@@ -364,7 +374,7 @@ def GCAD(relations: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]) -> list[C
     # cells. We don't do that here.
     return cells
 
-@autolog
+@auto_log_trace
 def merge(cells: list[Cell]) -> list[Cell]:
     """
     Merge adjacent cells (Remark 3.7 of [S00]) using an aggressive
