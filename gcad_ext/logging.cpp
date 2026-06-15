@@ -5,6 +5,7 @@
  */
 
 #include <atomic>
+#include <math.h>
 #include <mutex>
 #include <stdio.h>
 #include <thread>
@@ -69,6 +70,24 @@ static inline void fprint(FILE *f, const FMT_B x) {
     else if (x.val < (1ul<<50)) { unit = "TB"; scale = 1./(1ul<<40); }
     else { unit = "PB"; scale = 1./(1ul<<50); }
     fprintf(f, "%.1f%s", x.val*scale, unit);
+}
+
+static inline void
+fprint_time(FILE *f, double s)
+{
+    double m = floor(s * (1. / 60.));
+    s = s - m * 60.;
+    if (m == 0) {
+        fprintf(f, "%6.3f", s);
+    } else {
+        double h = floor(m * (1. / 60.));
+        m = m - h * 60.;
+        if (h == 0) {
+            fprintf(f, "%2.0f:%06.3f", m, s);
+        } else {
+            fprintf(f, "%2.0f:%02.0f:%06.3f", h, m, s);
+        }
+    }
 }
 
 template <typename... Args> static void
@@ -210,7 +229,9 @@ struct Hog {
     {
         std::lock_guard<std::mutex> lock(mtx);
         double elapsed = now - spans[0].start_time;
-        fprintf(out, "\033[2m%5.3f\033[0m ", elapsed);
+        fputs("\033[2m", out);
+        fprint_time(out, elapsed);
+        fputs("\033[0m ", out);
         int d = spans[parent].log_depth + 1;
         for (int i = 0; i < d; i++) {
             fputs("│ ", out);
@@ -387,27 +408,18 @@ static span_t HOG_current_span = 0;
 /* Scope-based logging & tracing
  */
 
-struct _HOG_logged_scope_info {};
-struct _HOG_silent_scope_info {};
+struct _HOG_logged_scope_info {
+    ~_HOG_logged_scope_info() { log_trace_exit(); };
+};
 
-static void
-_HOG_logged_scope_exit(const _HOG_logged_scope_info *i)
-{
-    (void)i;
-    log_trace_exit();
-}
-
-static void
-_HOG_silent_scope_exit(const _HOG_silent_scope_info *i)
-{
-    (void)i;
-    trace_exit();
-}
+struct _HOG_silent_scope_info {
+    ~_HOG_silent_scope_info() { trace_exit(); };
+};
 
 #define log_trace_scope(...) \
-    __attribute__((cleanup(_HOG_logged_scope_exit))) _HOG_logged_scope_info _scope_info = {}; \
+    _HOG_logged_scope_info _scope_info{}; \
     log_trace_enter(__VA_ARGS__);
 
 #define trace_scope(...) \
-    __attribute__((cleanup(_HOG_silent_scope_exit))) _HOG_silent_scope_info _scope_info = {}; \
+    _HOG_silent_scope_info _scope_info{}; \
     trace_enter(__VA_ARGS__);
