@@ -41,11 +41,12 @@ from .log import *
 class PolyRoot:
     """Real root of a polynomial."""
     poly: sp.Poly; "Polynomial defining the root."
+    var_idx: int; "Index of the variable in which to find the roots."
     idx: int; "Index of the real root, if roots were ordered by value."
     value_lo: sp.Rational; "Lower bound on the root's value at the sample point."
     value_hi: sp.Rational; "Upper bound on the root's value at the sample point."
     def __repr__(self):
-        p = self.poly.as_expr().subs({self.poly.gen: sp.Symbol("#")})
+        p = self.poly.as_expr().subs({self.poly.gens[self.var_idx]: sp.Symbol("#")})
         p = str(p).replace(" ", "").replace("**", "^")
         return f"Root[{p}, {self.idx}]"
 
@@ -257,7 +258,7 @@ def isolate_real_roots(pr: list[sp.Poly], subs: dict, var: sp.Symbol) -> list[Po
         [p.subs(subs).clear_denoms(convert=True)[1] for p in pr]
     )
     roots = [
-        PolyRoot(p, ridx, lo, hi)
+        PolyRoot(p, p.gens.index(var), ridx, lo, hi)
         for p, i in zip(pr, intervals)
         for ridx, (lo, hi) in enumerate(i)
     ]

@@ -171,6 +171,7 @@ expressions (i.e. turn $a>b$ into $a-b$, and $a<b$ into $b-a$).
 **PolyRoot**. Real root of a polynomial.
 
 * **poly**: *Poly*. Polynomial defining the root.
+* **var_idx**: *int*. Index of the variable in which to find the roots.
 * **idx**: *int*. Index of the real root, if roots were ordered by value.
 * **value_lo**: *Rational*. Lower bound on the root's value at the sample point.
 * **value_hi**: *Rational*. Upper bound on the root's value at the sample point.
