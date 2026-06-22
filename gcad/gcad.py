@@ -21,6 +21,16 @@ dRE22:
     complexity analysis".
     CASC 2022.
     https://doi.org/10.1007/978-3-031-14788-3_17
+    
+PdRAEC23:
+    Lynn Pickering, Tereso Del Rio Almajano,
+    Matthew England, Kelly Cohen.
+    "Explainable AI Insights for Symbolic Computation:
+    A case study on selecting the variable ordering
+    for cylindrical algebraic decomposition".
+    J. Symb. Comput. 123, 102276 (2024)
+    https://doi.org/10.1016/j.jsc.2023.102276
+
 """
 
 from __future__ import annotations
@@ -35,6 +45,7 @@ from gcad_ext import (
 )
 #from gcad.root_isolation import isolate_many_roots
 import sympy as sp
+from fractions import Fraction
 from .log import *
 
 @dataclass(slots=True)
@@ -235,6 +246,62 @@ def greedy_mods_order(
                 rev_order.append(best_var)
                 group.remove(best_var)
                 if n > 2: 
+                    pr = SFRP_PR(pr, best_var, varlist)
+            trace_progress(len(rev_order), len(varlist))
+        if len(group) == 1:
+            n = len(varlist) - len(rev_order)
+            best_var = group[0]
+            log(f"Best var #{n}: {best_var} (the only remaining)")
+            rev_order.append(best_var)
+            if n > 1:
+                # Project out variable so it does not appear
+                # when considering next group
+                pr = SFRP_PR(pr, best_var, varlist)
+            trace_progress(len(rev_order), len(varlist))
+    return list(reversed(rev_order))
+
+@auto_log_trace
+def greedy_t1_order(
+    relations: sp.Expr | list[sp.Expr], var_groups: list[list[sp.Symbol]]
+) -> list[sp.Symbol]:
+    """
+    Variable order that greedily minimizes the "t1" metric,
+    as advocated in [PdRAEC23].
+    """
+    rev_order = []
+    varlist = [v for g in var_groups for v in g]
+    positives = relations_to_positives(relations, varlist)
+    trace_progress(0, len(varlist))
+    pr = SFRP([sp.Poly(p, *varlist) for p in positives], varlist)
+    for group in reversed(var_groups):
+        log(f"Searching among {group}")
+        while len(group) > 1:
+            n = len(varlist) - len(rev_order)
+            with trace(f"Var #{n}"):
+                best_sum_max_vi = None
+                best_avg_avg_vi = None
+                best_sum_sum_vi = None
+                for var in group:
+                    vpos = varlist.index(var)
+                    sum_max_vi = 0
+                    sum_sum_vi = 0
+                    sum_avg_vi = 0
+                    for p in pr:
+                        v = [m[vpos] for m in p.monoms()]
+                        sum_max_vi += max(v)
+                        sum_sum_vi += sum(v)
+                        sum_avg_vi += Fraction(sum(v), len(v))
+                    avg_avg_vi = Fraction(sum_avg_vi, len(pr))
+                    log(f'{var} {sum_max_vi} {avg_avg_vi} ({float(avg_avg_vi):1.4e}) {sum_sum_vi}')
+                    if best_sum_max_vi is None or (sum_max_vi, avg_avg_vi, sum_sum_vi) < (best_sum_max_vi, best_avg_avg_vi, best_sum_sum_vi):
+                        best_var = var
+                        best_sum_max_vi = sum_max_vi
+                        best_avg_avg_vi = avg_avg_vi
+                        best_sum_sum_vi = sum_sum_vi
+                log(f"Best var #{len(varlist) - len(rev_order)}: {best_var}")
+                rev_order.append(best_var)
+                group.remove(best_var)
+                if n > 2:
                     pr = SFRP_PR(pr, best_var, varlist)
             trace_progress(len(rev_order), len(varlist))
         if len(group) == 1:

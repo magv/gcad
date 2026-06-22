@@ -6,6 +6,7 @@ from .gcad import (
     merge,
     greedy_sotd_order,
     greedy_mods_order,
+    greedy_t1_order,
     PolyRoot,
     AxisBound
 )

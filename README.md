@@ -87,9 +87,9 @@ the library with `make`. Run tests with `make test`.
 This implementation is based on the work of A. Strzeboński ([S00]).
 The root finding used here is based on the works of A. Akritas,
 A. Strzeboński, and others ([ASV08], [AAS08], [ASV06], [AS05]).
-The variable ordering heuristics are from [DSS04] and [dRE22].
-The handling of rationals and polynomials is done by [FLINT],
-[MPFR], and [GMP].
+The variable ordering heuristics are from [DSS04], [dRE22], and
+[PdRAEC23]. The handling of rationals and polynomials is done by 
+[FLINT], [MPFR], and [GMP].
 
 [S00]: https://doi.org/10.1006/jsco.1999.0327
 [ASV08]: https://doi.org/10.15388/NA.2008.13.3.14557
@@ -98,6 +98,7 @@ The handling of rationals and polynomials is done by [FLINT],
 [AS05]: https://doi.org/10.15388/NA.2005.10.4.15110
 [DSS04]: https://doi.org/10.1145/1005285.1005303
 [dRE22]: https://doi.org/10.1007/978-3-031-14788-3_17 
+[PdRAEC23]: https://doi.org/10.1016/j.jsc.2023.102276
 
 ## License
 
@@ -143,6 +144,12 @@ of degree sum" metric, as advocated in [dRE22].
 
 Variable order that greedily minimizes the "sum of total
 degrees" metric, as advocated in [DSS04].
+
+<a id="gcad.greedy_t1_order"></a>
+**greedy_t1_order** (relations: *Expr | list[Expr]*, var_groups: *list[list[Symbol]]*) → *list[Symbol]*
+
+Variable order that greedily minimizes the "t1" metric,
+as advocated in [PdRAEC23].
 
 <a id="gcad.merge"></a>
 **merge** (cells: *list[list[[AxisBound](#gcad.AxisBound)]]*) → *list[list[[AxisBound](#gcad.AxisBound)]]*
