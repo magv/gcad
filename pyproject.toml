@@ -63,6 +63,14 @@ extra-compile-args = [
     "-Wno-unused-function",
     "-DPy_LIMITED_API=0x030A0000",
     "-UNDEBUG",
+    "-Ihepware/include",
+    "-fdata-sections",
+    "-ffunction-sections",
+]
+extra-link-args = [
+    "-Lhepware/lib",
+    "-Wl,--gc-sections",
+    "-s"
 ]
 py-limited-api = true
 

@@ -1,9 +1,27 @@
-PYTHON=python3
+PYTHON?=python3
 
 all: build README.md
 
-build: phony
-	${PYTHON} -c "from setuptools import setup; setup()" build_ext --inplace
+hepware/Makefile:
+	git clone --revision 51efa0e54a0ee08c3cfc7b976be2622d02cf68c6 https://github.com/magv/hepware
+
+build-deps: hepware/Makefile phony
+	+${MAKE} -C hepware flint.done mpfr.done gmp.done FETCH="curl --fail -o"
+
+build: build-deps phony
+	${PYTHON} setup.py build_ext --inplace
+
+test: build phony
+	${PYTHON} -m pytest -x --full-trace -m "not slow"
+
+test-full: build phony
+	${PYTHON} -m pytest -x --full-trace
+
+README.md: build phony
+	sed '/## API/,$$d' README.md >README.md.tmp
+	printf '## API\n\n' >>README.md.tmp
+	${PYTHON} mod2md.py >>README.md.tmp
+	mv README.md.tmp README.md
 
 clean: phony
 	rm -f gcad_ext.*.so gcad_ext/gcad_ext.cpp
@@ -12,28 +30,15 @@ clean: phony
 	rm -f README.md.tmp
 	rm -f gcad/_version.py
 
-dist: phony
-	${PYTHON} -m build
-	rm -rf gcad.egg-info/
+sdist: phony
+	${PYTHON} -m build --sdist --no-isolation
 
-last-commit-dist: phony
-	mkdir -p dist
-	tmp=$$(mktemp -d) && \
-	    git clone . "$${tmp}/" && \
-	    ${PYTHON} -m build "$${tmp}/" && \
-	    cp -a $${tmp}/dist/* dist/ && \
-	    rm -rf "$${tmp}/"
+bdist: build phony
+	${PYTHON} -m build --wheel --no-isolation
 
-test: build phony
-	${PYTHON} -m pytest -x --full-trace -m "not slow"
+dist: sdist bdist
 
-test-full: build phony
-	${PYTHON} -m pytest -x --full-trace
-
-README.md: phony
-	sed '/## API/,$$d' README.md >README.md.tmp
-	printf '## API\n\n' >>README.md.tmp
-	$(PYTHON) mod2md.py >>README.md.tmp
-	mv README.md.tmp README.md
+last-commit-sdist: phony
+	${PYTHON} -m build --sdist
 
 phony:;

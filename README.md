@@ -59,18 +59,21 @@ Cell 1 example point:
 
 ## How to install
 
-You will need a C++ compiler ([GCC] or [Clang]), [FLINT], [MPFR],
-and [GMP] development libraries installed on your system. Once
-you have those, you can install this package via
+You will need a C++ compiler toolchain: [GCC] or [Clang], a
+normal set of Unix build tools, and [curl]. If you have those,
+you can install this package via
 
 ```
 pip install git+https://github.com/magv/gcad/
 ```
 
-If either the desired compiler or the libraries are located in
-a non-standard locations, you can set `CXX`, `CXXFLAGS`, and
-`LDFLAGS` environment variables before attempting installation
-to convey this information to the build system.
+If the desired compiler is located in a non-standard locations,
+you can set `CC`, `CFLAGS`, `CXX`, `CXXFLAGS`, and `LDFLAGS`
+environment variables before attempting installation to convey
+this information to the build system.
+
+Note that the build system will build [FLINT], [MPFR], and [GMP]
+automatically (via [hepware]).
 
 If you prefer to experiment with the source code, then clone it,
 install the dependencies listed in `pyproject.toml`, and build
@@ -81,6 +84,8 @@ the library with `make`. Run tests with `make test`.
 [FLINT]: https://flintlib.org/
 [MPFR]: https://www.mpfr.org/
 [GMP]: https://gmplib.org/
+[curl]: https://curl.se
+[hepware]: https://github.com/magv/hepware
 
 ## References
 
