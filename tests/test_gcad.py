@@ -285,7 +285,6 @@ def test_ex44_T_B2():
     cells = merge(GCAD(T + B2, [x, y, z]))
     assert len(cells) == 1
 
-@pytest.mark.slow
 def test_ex44_HB1_HB2_HB3():
     # Example 4.4 from S00.
     B1 = [1 - x**2 - y**2 - z**2 > 0]
@@ -297,7 +296,6 @@ def test_ex44_HB1_HB2_HB3():
     cells = merge(GCAD(HB1 + HB2 + HB3, [x, y, z]))
     assert len(cells) == 0
 
-@pytest.mark.slow
 def test_ex44_HT_HB2_HB3():
     # Example 4.4 from S00.
     B2 = [1 - (x-1)**2 - (y-1)**2 - (z-1)**2 > 0]
@@ -317,7 +315,6 @@ def failing_test_ex44_T_C1_B2():
     cells = merge(GCAD(T + C1 + B2, [x, y, z]))
     assert len(cells) == 28 # We get only 19.
 
-@pytest.mark.slow
 def test_ex44_HT_C1_HB2():
     # Example 4.4 from S00.
     B2 = [1 - (x-1)**2 - (y-1)**2 - (z-1)**2 > 0]
