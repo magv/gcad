@@ -494,4 +494,4 @@ def merge(cells: list[Cell]) -> list[Cell]:
             log(f"Merges: {n_merges}")
             return cells
 
-from gcad_ext import PR, SFRP, SFRP_PR
+from gcad_ext import PR, SFRP, SFRP_PR, RSFC

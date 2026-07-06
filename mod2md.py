@@ -38,6 +38,9 @@ def class_member_docstrings(typ: type) -> dict[str, str]:
 HREFS = {}
 IDS = {}
 
+def is_cython_function(obj) -> bool:
+    return type(obj).__name__ == "cython_function_or_method"
+
 def prewr_function(name: str, fun: types.FunctionType, mod: types.ModuleType):
     anchor = f"{mod.__name__}.{name}"
     HREFS[f"{fun.__module__}.{name}"] = f"#{anchor}"
@@ -51,7 +54,7 @@ def prewr_class(name: str, typ: type, mod: types.ModuleType):
 def prewr_module(mod: types.ModuleType):
     for name, value in inspect.getmembers(mod):
         if name.startswith("_"): continue
-        if inspect.isfunction(value):
+        if inspect.isfunction(value) or is_cython_function(value):
             prewr_function(name, value, mod)
         elif inspect.isclass(value):
             prewr_class(name, value, mod)
@@ -132,7 +135,7 @@ def wr_module(mod: types.ModuleType):
     wr("### Functions\n\n")
     for name, value in inspect.getmembers(mod):
         if name.startswith("_"): continue
-        if inspect.isfunction(value):
+        if inspect.isfunction(value) or is_cython_function(value):
             wr_function(name, value, mod)
     wr("### Classes\n\n")
     for name, value in inspect.getmembers(mod):
@@ -145,7 +148,7 @@ def wr_module(mod: types.ModuleType):
     # Double-check there's nothing else.
     for name, value in inspect.getmembers(mod):
         if name.startswith("_"): continue
-        if inspect.isfunction(value): continue
+        if inspect.isfunction(value) or is_cython_function(value): continue
         if inspect.isclass(value): continue
         if inspect.ismodule(value): continue
         raise ValueError(f"Can't document {mod.__name__}.{name} (a {type(value)})")

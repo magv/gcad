@@ -129,7 +129,7 @@ Generic projection (Algorithm 3.4 of [S00]). Return the list
 of $pr_i$, as polynomials with integer coefficients.
 
 <a id="gcad.RSFC"></a>
-**RSFC** (positives: *list[Poly]*, pr: *list[list[Poly]]*, varlist: *list[Symbol]*) → *list[list[[AxisBound](#gcad.AxisBound)]]*
+**RSFC** (positives: *list[Poly]*, pr: *list[list[Poly]]*, varlist: *list[Symbol]*) → *list[list]*
 
 Recursive Solution Formula Construction (Algorithm 3.5 of [S00]).
 

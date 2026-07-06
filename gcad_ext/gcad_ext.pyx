@@ -144,6 +144,7 @@ cdef void fmpz_mpoly_set_sympy_Poly(fmpz_mpoly_struct *mp, fmpz_mpoly_ctx_struct
     cdef ulong *exps
     gens = poly.gens
     nvars = len(gens)
+    assert nvars == fmpz_mpoly_ctx_nvars(ctx)
     fmpz_mpoly_zero(mp, ctx)
     fmpz_init(&co)
     exps = <ulong *>calloc(nvars, sizeof(ulong))
@@ -349,9 +350,25 @@ cdef extern from "root_isolation.cpp" nogil:
     vector[vector[RootInterval]] _isolate_many_roots "isolate_many_roots"(vector[ZPoly] &polys)
 
 cdef extern from "gcad.cpp" nogil:
+    ctypedef struct AxisBound:
+        Q point
+        int cell_lo_poly_idx
+        int cell_lo_root_idx
+        Q cell_lo_value_lo
+        Q cell_lo_value_hi
+        int cell_hi_poly_idx
+        int cell_hi_root_idx
+        Q cell_hi_value_lo
+        Q cell_hi_value_hi
+    ctypedef vector[AxisBound] Cell
     vector[fmpz_mpoly_struct] _SFRP "SFRP"(vector[fmpz_mpoly_struct] polys, fmpz_mpoly_ctx_struct ctx)
     vector[fmpz_mpoly_struct] _PR "PR"(vector[fmpz_mpoly_struct] polys, slong var, fmpz_mpoly_ctx_struct ctx)
     vector[fmpz_mpoly_struct] _SFRP_PR "SFRP_PR"(vector[fmpz_mpoly_struct] polys, slong var, fmpz_mpoly_ctx_struct ctx)
+    vector[Cell] _RSFC "RSFC"(
+        vector[fmpz_mpoly_struct] positives,
+        vector[vector[fmpz_mpoly_struct]] pr,
+        int nvars,
+        fmpz_mpoly_ctx_struct ctx)
 
 def shortest_fraction_between(a: Fraction, b: Fraction) -> Fraction:
     """Simplest fraction between, or equal to, two rationals."""
@@ -501,6 +518,79 @@ def SFRP_PR(polys: list[Poly], var: Symbol, variables: list[Symbol]) -> list[Pol
             fmpz_mpoly_clear(&p, &ctx)
         for p in result_polys:
             fmpz_mpoly_clear(&p, &ctx)
+        fmpz_mpoly_ctx_clear(&ctx)
+
+def RSFC(
+    positives: list[Poly], pr: list[list[Poly]], varlist: list[Symbol]
+) -> list[list]:
+    """Recursive Solution Formula Construction (Algorithm 3.5 of [S00])."""
+    # Woof, what a hack!
+    from gcad.gcad import PolyRoot as gcad_PolyRoot, AxisBound as gcad_AxisBound
+    cdef fmpz_mpoly_ctx_struct ctx
+    cdef vector[fmpz_mpoly_struct] flint_positives
+    cdef vector[vector[fmpz_mpoly_struct]] flint_pr
+    cdef vector[fmpz_mpoly_struct] pr_k
+    cdef fmpz_mpoly_struct mp
+    cdef vector[Cell] result
+    cdef Cell *cell
+    cdef AxisBound *ab_cpp
+    nvars = len(varlist)
+    fmpz_mpoly_ctx_init(&ctx, nvars, ORD_LEX)
+    try:
+        for p in positives:
+            fmpz_mpoly_init(&mp, &ctx)
+            fmpz_mpoly_set_sympy_Poly(&mp, &ctx, p)
+            flint_positives.push_back(mp)
+        for k in range(len(pr)):
+            pr_k.clear()
+            for p in pr[k]:
+                p = Poly(p, *varlist)
+                fmpz_mpoly_init(&mp, &ctx)
+                fmpz_mpoly_set_sympy_Poly(&mp, &ctx, p)
+                pr_k.push_back(mp)
+            flint_pr.push_back(pr_k)
+        with nogil:
+            result = _RSFC(flint_positives, flint_pr, nvars, ctx)
+        py_cells = []
+        for ci in range(result.size()):
+            cell = &result[ci]
+            py_cell = []
+            for bi in range(cell.size()):
+                ab_cpp = &cell[0][bi]
+                py_cell.append(gcad_AxisBound(
+                    var=varlist[bi],
+                    point=fmpq_get_py_Fraction(Q_to_fmpq(ab_cpp.point)),
+                    cell_lo=(
+                        gcad_PolyRoot(
+                            poly=pr[bi][ab_cpp.cell_lo_poly_idx],
+                            var_idx=bi,
+                            idx=ab_cpp.cell_lo_root_idx,
+                            value_lo=fmpq_get_py_Fraction(Q_to_fmpq(ab_cpp.cell_lo_value_lo)),
+                            value_hi=fmpq_get_py_Fraction(Q_to_fmpq(ab_cpp.cell_lo_value_hi)),
+                        )
+                        if ab_cpp.cell_lo_poly_idx >= 0
+                        else None
+                    ),
+                    cell_hi=(
+                        gcad_PolyRoot(
+                            poly=pr[bi][ab_cpp.cell_hi_poly_idx],
+                            var_idx=bi,
+                            idx=ab_cpp.cell_hi_root_idx,
+                            value_lo=fmpq_get_py_Fraction(Q_to_fmpq(ab_cpp.cell_hi_value_lo)),
+                            value_hi=fmpq_get_py_Fraction(Q_to_fmpq(ab_cpp.cell_hi_value_hi)),
+                        )
+                        if ab_cpp.cell_hi_poly_idx >= 0
+                        else None
+                    )
+                ))
+            py_cells.append(py_cell)
+        return py_cells
+    finally:
+        for mp in flint_positives:
+            fmpz_mpoly_clear(&mp, &ctx)
+        for pr_k in flint_pr:
+            for mp in pr_k:
+                fmpz_mpoly_clear(&mp, &ctx)
         fmpz_mpoly_ctx_clear(&ctx)
 
 log_start()
