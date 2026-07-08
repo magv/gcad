@@ -7,11 +7,14 @@ hepware/Makefile:
 	git clone https://github.com/magv/hepware
 	cd hepware && git checkout ${HEPWARE_COMMIT}
 
+hepware/urlget: hepware/Makefile
+	echo "import sys; from urllib.request import urlretrieve as get; get(sys.argv[2], filename=sys.argv[1])" >$@
+
 print-hepware-id:
 	@echo ${HEPWARE_COMMIT}
 
-build-deps: hepware/Makefile phony
-	+${MAKE} -C hepware flint.done mpfr.done gmp.done FETCH="curl --fail -o"
+build-deps: hepware/Makefile hepware/urlget phony
+	+${MAKE} -C hepware flint.done mpfr.done gmp.done FETCH="${PYTHON} urlget"
 
 build: build-deps phony
 	${PYTHON} setup.py build_ext --inplace
