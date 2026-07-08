@@ -1,9 +1,13 @@
 PYTHON?=python3
+HEPWARE_COMMIT=51efa0e54a0ee08c3cfc7b976be2622d02cf68c6 
 
 all: build README.md
 
 hepware/Makefile:
-	git clone --revision 51efa0e54a0ee08c3cfc7b976be2622d02cf68c6 https://github.com/magv/hepware
+	git clone --revision ${HEPWARE_COMMIT} https://github.com/magv/hepware
+
+print-hepware-id:
+	@echo ${HEPWARE_COMMIT}
 
 build-deps: hepware/Makefile phony
 	+${MAKE} -C hepware flint.done mpfr.done gmp.done FETCH="curl --fail -o"
