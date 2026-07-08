@@ -4,7 +4,8 @@ HEPWARE_COMMIT=51efa0e54a0ee08c3cfc7b976be2622d02cf68c6
 all: build README.md
 
 hepware/Makefile:
-	git clone --revision ${HEPWARE_COMMIT} https://github.com/magv/hepware
+	git clone https://github.com/magv/hepware
+	cd hepware && git checkout ${HEPWARE_COMMIT}
 
 print-hepware-id:
 	@echo ${HEPWARE_COMMIT}
