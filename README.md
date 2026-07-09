@@ -59,32 +59,32 @@ Cell 1 example point:
 
 ## How to install
 
-You will need a C++ compiler toolchain: [GCC] or [Clang], a
-normal set of Unix build tools, and [curl]. If you have those,
-you can install this package via
+The latest release is available from [PyPI], and can be installed
+via [pip] with
 
-```
-pip install git+https://github.com/magv/gcad/
-```
+    pip install gcad
 
-If the desired compiler is located in a non-standard locations,
-you can set `CC`, `CFLAGS`, `CXX`, `CXXFLAGS`, and `LDFLAGS`
-environment variables before attempting installation to convey
-this information to the build system.
+[PyPI]: https://pypi.org/project/gcad/
+[pip]: https://pip.pypa.io/
+
+If you prefer to experiment with the source code, then clone it,
+make sure you have a C++ compiler toolchain ([GCC] or [Clang]),
+install the dependencies listed in `pyproject.toml`, and build
+with `make`. Run tests with `make test`.
 
 Note that the build system will build [FLINT], [MPFR], and [GMP]
 automatically (via [hepware]).
 
-If you prefer to experiment with the source code, then clone it,
-install the dependencies listed in `pyproject.toml`, and build
-the library with `make`. Run tests with `make test`.
+If the desired compiler is located in a non-standard location,
+you can set `CC`, `CFLAGS`, `CXX`, `CXXFLAGS`, and `LDFLAGS`
+environment variables before attempting installation to convey
+this information to the build system.
 
 [GCC]: https://gcc.gnu.org/
-[CLANG]: https://clang.llvm.org/
+[Clang]: https://clang.llvm.org/
 [FLINT]: https://flintlib.org/
 [MPFR]: https://www.mpfr.org/
 [GMP]: https://gmplib.org/
-[curl]: https://curl.se
 [hepware]: https://github.com/magv/hepware
 
 ## References
