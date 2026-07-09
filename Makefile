@@ -3,6 +3,9 @@ HEPWARE_COMMIT=39fa541a491f3ee4aaa485a305a334b35a6eb743
 
 all: build README.md
 
+print-hepware-id:
+	@echo ${HEPWARE_COMMIT}
+
 hepware/Makefile:
 	git clone https://github.com/magv/hepware
 	cd hepware && git checkout ${HEPWARE_COMMIT}
@@ -10,11 +13,10 @@ hepware/Makefile:
 hepware/urlget: hepware/Makefile
 	echo "import sys; from urllib.request import urlretrieve as get; get(sys.argv[2], filename=sys.argv[1])" >$@
 
-print-hepware-id:
-	@echo ${HEPWARE_COMMIT}
-
 build-deps: hepware/Makefile hepware/urlget phony
-	cd hepware && git checkout ${HEPWARE_COMMIT}
+	git -C hepware checkout ${HEPWARE_COMMIT} || \
+		git -C hepware fetch && \
+		git -C hepware checkout ${HEPWARE_COMMIT}
 	+${MAKE} -C hepware flint.done mpfr.done gmp.done FETCH="${PYTHON} urlget"
 
 build: build-deps phony
