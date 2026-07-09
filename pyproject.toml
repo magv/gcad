@@ -69,7 +69,6 @@ extra-compile-args = [
 ]
 extra-link-args = [
     "-Lhepware/lib",
-    "-Wl,--gc-sections",
     "-s"
 ]
 py-limited-api = true

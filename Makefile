@@ -1,5 +1,5 @@
 PYTHON?=python3
-HEPWARE_COMMIT=51efa0e54a0ee08c3cfc7b976be2622d02cf68c6 
+HEPWARE_COMMIT=39fa541a491f3ee4aaa485a305a334b35a6eb743 
 
 all: build README.md
 
@@ -14,6 +14,7 @@ print-hepware-id:
 	@echo ${HEPWARE_COMMIT}
 
 build-deps: hepware/Makefile hepware/urlget phony
+	cd hepware && git checkout ${HEPWARE_COMMIT}
 	+${MAKE} -C hepware flint.done mpfr.done gmp.done FETCH="${PYTHON} urlget"
 
 build: build-deps phony
