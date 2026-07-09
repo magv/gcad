@@ -59,12 +59,12 @@ Cell 1 example point:
 
 ## How to install
 
-The latest release is available from [PyPI], and can be installed
-via [pip] with
+The latest release is available from [PyPI.org/project/gcad],
+and can be installed via [pip] with
 
     pip install gcad
 
-[PyPI]: https://pypi.org/project/gcad/
+[PyPI.org/project/gcad]: https://pypi.org/project/gcad/
 [pip]: https://pip.pypa.io/
 
 If you prefer to experiment with the source code, then clone it,
