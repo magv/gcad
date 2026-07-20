@@ -34,6 +34,7 @@ PdRAEC23:
 """
 
 from __future__ import annotations
+import copy
 
 from dataclasses import dataclass
 from gcad_ext import (
@@ -177,11 +178,12 @@ def greedy_sotd_order(
     degrees" metric, as advocated in [DSS04].
     """
     rev_order = []
-    varlist = [v for g in var_groups for v in g]
+    vg = copy.deepcopy(var_groups)
+    varlist = [v for g in vg for v in g]
     positives = relations_to_positives(relations, varlist)
     trace_progress(0, len(varlist))
     pr = SFRP([sp.Poly(p, *varlist) for p in positives], varlist)
-    for group in reversed(var_groups):
+    for group in reversed(vg):
         group = list(group)
         log(f"Searching among {group}")
         while len(group) > 1:
@@ -222,11 +224,12 @@ def greedy_mods_order(
     of degree sum" metric, as advocated in [dRE22].
     """
     rev_order = []
-    varlist = [v for g in var_groups for v in g]
+    vg = copy.deepcopy(var_groups)
+    varlist = [v for g in vg for v in g]
     positives = relations_to_positives(relations, varlist)
     trace_progress(0, len(varlist))
     pr = SFRP([sp.Poly(p, *varlist) for p in positives], varlist)
-    for group in reversed(var_groups):
+    for group in reversed(vg):
         log(f"Searching among {group}")
         while len(group) > 1:
             n = len(varlist) - len(rev_order)
@@ -269,11 +272,12 @@ def greedy_t1_order(
     as advocated in [PdRAEC23].
     """
     rev_order = []
-    varlist = [v for g in var_groups for v in g]
+    vg = copy.deepcopy(var_groups)
+    varlist = [v for g in vg for v in g]
     positives = relations_to_positives(relations, varlist)
     trace_progress(0, len(varlist))
     pr = SFRP([sp.Poly(p, *varlist) for p in positives], varlist)
-    for group in reversed(var_groups):
+    for group in reversed(vg):
         log(f"Searching among {group}")
         while len(group) > 1:
             n = len(varlist) - len(rev_order)
