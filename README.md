@@ -104,6 +104,8 @@ The variable ordering heuristics are from [DSS04], [dRE22], and
 [DSS04]: https://doi.org/10.1145/1005285.1005303
 [dRE22]: https://doi.org/10.1007/978-3-031-14788-3_17 
 [PdRAEC23]: https://doi.org/10.1016/j.jsc.2023.102276
+[JOS25]: https://doi.org/10.1007/JHEP10(2025)068
+[LLSSV25]: https://doi.org/10.1007/JHEP02(2026)154
 
 ## License
 
