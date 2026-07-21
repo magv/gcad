@@ -21,7 +21,7 @@ testing = ["pytest"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["slow"]
+markers = ["slow", "intractable"]
 
 [build-system]
 requires = ["cython>=3.1", "setuptools>=79", "setuptools-scm[simple]>=9.2"]

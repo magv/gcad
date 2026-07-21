@@ -344,6 +344,68 @@ def test_ex_e5():
     #mcells = merge(cells)
     #assert len(mcells) == 0
 
+def test_melih_box():
+    # Double box integral provided by Melih Ozcelik
+    x1, x2, x3, x4, x5, x6, x7 = sp.symbols("x1 x2 x3 x4 x5 x6 x7")
+    ff = -4*x1*x4*x5 + 2*x1*x3*x6 + 2*x2*x3*x6 + 2*x2*x5*x6 + 2*x3*x5*x6 + x1*x6**2 + x2*x6**2 + x5*x6**2 + 2*x2*x3*x7 + 2*x2*x4*x7 + 2*x2*x5*x7 + 2*x3*x5*x7 + 2*x2*x6*x7 + 2*x3*x6*x7 + 2*x5*x6*x7 + x6**2*x7 + x3*x7**2 + x4*x7**2 + x5*x7**2 + x6*x7**2
+    problem1 = [ ff < 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 >0, x7 > 0]
+    problem2 = [ ff > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 >0, x7 > 0]
+    variables = [[x1, x2, x3, x4, x5, x6, x7]]
+    greedy_variables = greedy_t1_order(problem1, variables)
+    assert greedy_variables == [x7, x5, x6, x3, x4, x2, x1]
+    mcells = merge(GCAD(problem1, greedy_variables))
+    assert len(mcells) == 1
+    mcells = merge(GCAD(problem2, greedy_variables))
+    assert len(mcells) == 2
+    
+def test_triangle2l_split():
+    # pySecDec example: triangle2L_split
+    x0, x1, x2, x3, x4, x5 = sp.symbols("x0 x1 x2 x3 x4 x5")
+    ff = + (1)*x3**2*x5 + (1)*x3**2*x4 + (1)*x2*x3*x5 + (1)*x2*x3*x4 + (1)*x1*x3*x5 + (1)*x1*x3*x4 + (1)*x1*x3**2 + (-1)*x1*x2*x4 + (1)*x1*x2*x3 + (1)*x0*x3*x4 + (1)*x0*x3**2 + (1)*x0*x2*x3 + (-1)*x0*x1*x5 + (-1)*x0*x1*x4 + (-1)*x0*x1*x3 + (-1)*x0*x1*x2
+    problem1 = [ ff < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0]
+    problem2 = [ ff > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0]
+    variables = [[x0, x1, x2, x3, x4, x5]]
+    greedy_variables = greedy_t1_order(problem1, variables)
+    assert greedy_variables == [x3, x1, x0, x2, x4, x5]
+    mcells = merge(GCAD(problem1, greedy_variables))
+    assert len(mcells) == 8
+    mcells = merge(GCAD(problem2, greedy_variables))
+    assert len(mcells) == 10
+
+@pytest.mark.slow
+@pytest.mark.intractable
+def test_gluza_ex30():
+    # Example lh_np30 from [2201.02576] provided by Krzysztof Grzanka/Janus Gluza on 12.08.2025
+    x0, x1, x2, x3, x4, x5, x6, x7 = sp.symbols("x0 x1 x2 x3 x4 x5 x6 x7")
+    ff = + (-1)*x4*x5*x6*x7 + (-1)*x3*x4*x6*x7 + (-1)*x3*x4*x5*x7 + (1)*x3*x4*x5*x6 + (1)*x3**2*x6*x7 + (1)*x3**2*x5*x7 + (1)*x3**2*x5*x6 + (1)*x3**2*x4*x6 + (1)*x3**2*x4*x5 + (-1)*x2*x4*x6*x7 + (-1)*x2*x4*x5*x6 + (-1)*x2*x3*x4*x7 + (-1)*x2*x3*x4*x5 + (1)*x2*x3**2*x7 + (1)*x2*x3**2*x5 + (1)*x2*x3**2*x4 + (-1)*x1*x4*x6*x7 + (-1)*x1*x4*x5*x7 + (1)*x1*x3*x4*x6 + (1)*x1*x3*x4*x5 + (1)*x1*x3**2*x6 + (1)*x1*x3**2*x5 + (-1)*x1*x2*x4*x7 + (-1)*x1*x2*x4*x6 + (-1)*x1*x2*x4*x5 + (1)*x1*x2*x3*x4 + (1)*x1*x2*x3**2 + (-1)*x0*x5*x6*x7 + (-1)*x0*x4*x5*x7 + (-1)*x0*x4*x5*x6 + (-1)*x0*x3*x6*x7 + (1)*x0*x3*x5*x7 + (-1)*x0*x3*x5*x6 + (-1)*x0*x3*x4*x7 + (-1)*x0*x3*x4*x6 + (1)*x0*x3**2*x7 + (1)*x0*x3**2*x5 + (1)*x0*x3**2*x4 + (-1)*x0*x2*x6*x7 + (-1)*x0*x2*x5*x6 + (-1)*x0*x2*x4*x7 + (-1)*x0*x2*x4*x6 + (-1)*x0*x2*x4*x5 + (1)*x0*x2*x3*x7 + (1)*x0*x2*x3*x5 + (1)*x0*x2*x3*x4 + (-1)*x0*x1*x6*x7 + (-1)*x0*x1*x5*x7 + (-1)*x0*x1*x4*x7 + (-1)*x0*x1*x4*x6 + (-1)*x0*x1*x4*x5 + (-1)*x0*x1*x3*x6 + (-1)*x0*x1*x3*x5 + (1)*x0*x1*x3*x4 + (1)*x0*x1*x3**2 + (-1)*x0*x1*x2*x7 + (-1)*x0*x1*x2*x6 + (-1)*x0*x1*x2*x5 + (1)*x0*x1*x2*x3
+    ff = ff.subs({x3:1}) # t1/mods is very slow with x3 active
+    problem1 = [ ff < 0, x0 > 0, x1 > 0, x2 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0]
+    problem2 = [ ff > 0, x0 > 0, x1 > 0, x2 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0]
+    variables = [[x0, x1, x2, x4, x5, x6, x7]]
+    greedy_variables = greedy_t1_order(problem1, variables)
+    assert greedy_variables == [x0, x6, x4, x2, x5, x7, x1]
+    mcells = merge(GCAD(problem1, greedy_variables))
+    #assert len(mcells) == 7 # TODO: example too slow to complete
+    mcells = merge(GCAD(problem2, greedy_variables))
+    #assert len(mcells) == 10 # TODO: example too slow to complete
+
+@pytest.mark.slow
+@pytest.mark.intractable
+def test_gluza_ex33():
+    # Example 33-35 from [2201.02576] provided by Krzysztof Grzanka/Janus Gluza on 12.08.2025
+    MT, x0, x1, x2, x3, x4, x5, x6, x7 = sp.symbols("MT x0 x1 x2 x3 x4 x5 x6 x7")
+    ff = + (MT**2)*x5*x6*x7**2 + (MT**2)*x5*x6**2*x7 + (2*MT**2 - 1)*x4*x5*x6*x7 + (MT**2)*x4*x5*x6**2 + (MT**2)*x4**2*x5*x6 + (MT**2)*x3*x6*x7**2 + (MT**2)*x3*x6**2*x7 + (MT**2)*x3*x5*x7**2 + (2*MT**2 - 1)*x3*x5*x6*x7 + (MT**2)*x3*x5*x6**2 + (2*MT**2 - 1)*x3*x4*x6*x7 + (MT**2)*x3*x4*x6**2 + (2*MT**2 - 1)*x3*x4*x5*x7 + (2*MT**2)*x3*x4*x5*x6 + (MT**2)*x3*x4**2*x6 + (MT**2)*x3*x4**2*x5 + (MT**2)*x2*x6*x7**2 + (MT**2)*x2*x6**2*x7 + (2*MT**2)*x2*x5*x6*x7 + (MT**2)*x2*x5*x6**2 + (2*MT**2 - 1)*x2*x4*x6*x7 + (MT**2)*x2*x4*x6**2 + (2*MT**2 - 1)*x2*x4*x5*x6 + (MT**2)*x2*x4**2*x6 + (MT**2)*x2*x3*x7**2 + (2*MT**2 - 1)*x2*x3*x6*x7 + (2*MT**2)*x2*x3*x5*x7 + (2*MT**2 - 1)*x2*x3*x5*x6 + (2*MT**2 - 1)*x2*x3*x4*x7 + (2*MT**2 - 1)*x2*x3*x4*x6 + (2*MT**2 - 1)*x2*x3*x4*x5 + (MT**2)*x2*x3*x4**2 + (MT**2)*x2**2*x6*x7 + (MT**2)*x2**2*x5*x6 + (MT**2)*x2**2*x4*x6 + (MT**2)*x2**2*x3*x7 + (MT**2)*x2**2*x3*x5 + (MT**2)*x2**2*x3*x4 + (MT**2)*x1*x6*x7**2 + (MT**2)*x1*x6**2*x7 + (MT**2)*x1*x5*x7**2 + (2*MT**2)*x1*x5*x6*x7 + (2*MT**2 - 1)*x1*x4*x6*x7 + (MT**2)*x1*x4*x6**2 + (2*MT**2 - 1)*x1*x4*x5*x7 + (2*MT**2)*x1*x4*x5*x6 + (MT**2)*x1*x4**2*x6 + (MT**2)*x1*x4**2*x5 + (2*MT**2 - 1)*x1*x3*x6*x7 + (MT**2)*x1*x3*x6**2 + (2*MT**2 - 1)*x1*x3*x5*x7 + (2*MT**2)*x1*x3*x5*x6 + (2*MT**2)*x1*x3*x4*x6 + (2*MT**2)*x1*x3*x4*x5 + (MT**2)*x1*x2*x7**2 + (4*MT**2)*x1*x2*x6*x7 + (MT**2)*x1*x2*x6**2 + (2*MT**2)*x1*x2*x5*x7 + (2*MT**2)*x1*x2*x5*x6 + (2*MT**2 - 1)*x1*x2*x4*x7 + (4*MT**2 - 1)*x1*x2*x4*x6 + (2*MT**2 - 1)*x1*x2*x4*x5 + (MT**2)*x1*x2*x4**2 + (2*MT**2 - 1)*x1*x2*x3*x7 + (2*MT**2 - 1)*x1*x2*x3*x6 + (2*MT**2 - 1)*x1*x2*x3*x5 + (2*MT**2)*x1*x2*x3*x4 + (MT**2)*x1*x2**2*x7 + (MT**2)*x1*x2**2*x6 + (MT**2)*x1*x2**2*x5 + (MT**2)*x1*x2**2*x4 + (MT**2)*x1*x2**2*x3 + (MT**2)*x1**2*x6*x7 + (MT**2)*x1**2*x5*x7 + (MT**2)*x1**2*x4*x6 + (MT**2)*x1**2*x4*x5 + (MT**2)*x1**2*x3*x6 + (MT**2)*x1**2*x3*x5 + (MT**2)*x1**2*x2*x7 + (MT**2)*x1**2*x2*x6 + (MT**2)*x1**2*x2*x5 + (MT**2)*x1**2*x2*x4 + (MT**2)*x1**2*x2*x3 + (MT**2)*x0*x5*x7**2 + (2*MT**2 - 1)*x0*x5*x6*x7 + (2*MT**2 - 1)*x0*x4*x5*x7 + (2*MT**2 - 1)*x0*x4*x5*x6 + (MT**2)*x0*x4**2*x5 + (MT**2)*x0*x3*x7**2 + (2*MT**2 - 1)*x0*x3*x6*x7 + (2*MT**2)*x0*x3*x5*x7 + (2*MT**2 - 1)*x0*x3*x5*x6 + (2*MT**2 - 1)*x0*x3*x4*x7 + (2*MT**2 - 1)*x0*x3*x4*x6 + (2*MT**2 - 1)*x0*x3*x4*x5 + (MT**2)*x0*x3*x4**2 + (MT**2)*x0*x2*x7**2 + (2*MT**2 - 1)*x0*x2*x6*x7 + (2*MT**2)*x0*x2*x5*x7 + (2*MT**2 - 1)*x0*x2*x5*x6 + (2*MT**2 - 1)*x0*x2*x4*x7 + (2*MT**2 - 1)*x0*x2*x4*x6 + (2*MT**2 - 1)*x0*x2*x4*x5 + (MT**2)*x0*x2*x4**2 + (2*MT**2)*x0*x2*x3*x7 + (2*MT**2)*x0*x2*x3*x5 + (2*MT**2)*x0*x2*x3*x4 + (MT**2)*x0*x2**2*x7 + (MT**2)*x0*x2**2*x5 + (MT**2)*x0*x2**2*x4 + (MT**2)*x0*x1*x7**2 + (2*MT**2 - 1)*x0*x1*x6*x7 + (2*MT**2 - 1)*x0*x1*x5*x7 + (2*MT**2 - 1)*x0*x1*x4*x7 + (2*MT**2 - 1)*x0*x1*x4*x6 + (2*MT**2 - 1)*x0*x1*x4*x5 + (MT**2)*x0*x1*x4**2 + (2*MT**2 - 1)*x0*x1*x3*x7 + (2*MT**2 - 1)*x0*x1*x3*x6 + (2*MT**2 - 1)*x0*x1*x3*x5 + (2*MT**2)*x0*x1*x3*x4 + (4*MT**2 - 1)*x0*x1*x2*x7 + (2*MT**2 - 1)*x0*x1*x2*x6 + (2*MT**2 - 1)*x0*x1*x2*x5 + (4*MT**2)*x0*x1*x2*x4 + (2*MT**2)*x0*x1*x2*x3 + (MT**2)*x0*x1*x2**2 + (MT**2)*x0*x1**2*x7 + (MT**2)*x0*x1**2*x4 + (MT**2)*x0*x1**2*x3 + (MT**2)*x0*x1**2*x2 + (MT**2)*x0**2*x5*x7 + (MT**2)*x0**2*x4*x5 + (MT**2)*x0**2*x3*x7 + (MT**2)*x0**2*x3*x5 + (MT**2)*x0**2*x3*x4 + (MT**2)*x0**2*x2*x7 + (MT**2)*x0**2*x2*x5 + (MT**2)*x0**2*x2*x4 + (MT**2)*x0**2*x1*x7 + (MT**2)*x0**2*x1*x4 + (MT**2)*x0**2*x1*x3 + (MT**2)*x0**2*x1*x2
+    ff = ff.subs({MT:1})
+    problem1 = [ ff < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0]
+    problem2 = [ ff > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0]
+    variables = [[x0, x1, x2, x3, x4, x5, x6, x7]]
+    greedy_variables = greedy_t1_order(problem1, variables)
+    #assert greedy_variables == [x0, x6, x4, x2, x3, x5, x7, x1] # TODO: example too slow to complete
+    mcells = merge(GCAD(problem1, greedy_variables))
+    #assert len(mcells) == 7 # TODO: example too slow to complete
+    mcells = merge(GCAD(problem2, greedy_variables))
+    #assert len(mcells) == 10 # TODO: example too slow to complete
+
 def test_x2_minus_y():
     cells = GCAD([x**2-y>0], [x, y])
     assert len(cells) == 1

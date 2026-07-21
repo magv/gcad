@@ -25,6 +25,9 @@ build: build-deps phony
 test: build phony
 	${PYTHON} -m pytest -x --full-trace -m "not slow"
 
+test-slow: build phony
+	${PYTHON} -m pytest -x --full-trace -m "not intractable"
+
 test-full: build phony
 	${PYTHON} -m pytest -x --full-trace
 
