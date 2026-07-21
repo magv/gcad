@@ -242,10 +242,9 @@ def test_ex413_pentagon():
     # Note: gmods order is [s51, s45, s34, s23, s12, x5, x4, x3, x2, x1] which gives 3 + 3 cells
     # Above the s12, s34, s51 threshold
     cells = merge(GCAD([F<0, 0<x1, 0<x2, 0<x3, 0<x4, 0<x5, 0<s12, 0<s34, 0<s51, s23<0, s45<0], [s12, s23, s34, s45, s51, x1, x2, x4, x5, x3]))
-    assert len(cells) == 2
+    assert len(cells) == 1
     cells = merge(GCAD([F>0, 0<x1, 0<x2, 0<x3, 0<x4, 0<x5, 0<s12, 0<s34, 0<s51, s23<0, s45<0], [s12, s23, s34, s45, s51, x1, x2, x4, x5, x3]))
-    assert len(cells) == 2
-    # TODO: fix - Mathematica gives 1 cell
+    assert len(cells) == 1
     # GenericCylindricalDecomposition[f < 0 &&
     # {x1, x2, x3, x4, x5} \[Element] PositiveReals &&
     # 0 < s12 && 0 < s34 && 0 < s51 && s23 < 0 && s45 < 0,
@@ -267,10 +266,9 @@ def test_ex415_bnp7():
     F = -s12*(x3*x4*x6+x2*x5*x7+x2*x3*x7+x2*x3*x6+x2*x3*x5+x2*x3*x4)-s23*x1*x5*x6+(s12+s23)*x1*x4*x7
     # Above the s12 threshold
     cells = merge(GCAD([F<0, 0<x1, 0<x2, 0<x3, 0<x4, 0<x5, 0<x6, 0<x7, 0<s12, s23<0, -s12<s23], [s23, s12, x7, x6, x5, x4, x3, x2, x1]))
-    assert len(cells) == 3
+    assert len(cells) == 1
     cells = merge(GCAD([F>0, 0<x1, 0<x2, 0<x3, 0<x4, 0<x5, 0<x6, 0<x7, 0<s12, s23<0, -s12<s23], [s23, s12, x7, x6, x5, x4, x3, x2, x1]))
-    assert len(cells) == 3
-    # TODO: fix - Mathematica gives 1 cell
+    assert len(cells) == 1
     # GenericCylindricalDecomposition[
     # f < 0 && {x1, x2, x3, x4, x5, x6, x7} \[Element] PositiveReals &&
     # 0 < s12 && s23 < 0 && -s12 < s23,

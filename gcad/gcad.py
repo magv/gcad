@@ -455,13 +455,15 @@ def merge(cells: list[Cell]) -> list[Cell]:
     """
     if len(cells) == 0:
         return []
+    def _eq_or_none(a: PolyRoot | None, b: PolyRoot | None) -> bool:
+        return (a is None and b is None) or PolyRoot_eq(a, b)
     def PolyRoot_eq(r1: PolyRoot | None, r2: PolyRoot | None) -> bool:
         if r1 is None: return False # Infinity is never a separator
         if r2 is None: return False # Infinity is never a separator
         return r1.idx == r2.idx and r1.poly == r2.poly
     def AxisBound_eq(ab1: AxisBound, ab2: AxisBound) -> bool:
-        return PolyRoot_eq(ab1.cell_lo, ab2.cell_lo) and \
-               PolyRoot_eq(ab1.cell_hi, ab2.cell_hi)
+        return _eq_or_none(ab1.cell_lo, ab2.cell_lo) and \
+               _eq_or_none(ab1.cell_hi, ab2.cell_hi)
     def Cell_eq(c1: Cell, c2: Cell) -> bool:
         return all(AxisBound_eq(ab1, ab2) for ab1, ab2 in zip(c1, c2))
     # While there's certainly a smarter way to find pairs to
