@@ -36,6 +36,7 @@ PdRAEC23:
 from __future__ import annotations
 import copy
 
+from collections import defaultdict
 from dataclasses import dataclass
 from gcad_ext import (
     discriminant,
@@ -455,49 +456,98 @@ def merge(cells: list[Cell]) -> list[Cell]:
     """
     if len(cells) == 0:
         return []
-    def _eq_or_none(a: PolyRoot | None, b: PolyRoot | None) -> bool:
-        return (a is None and b is None) or PolyRoot_eq(a, b)
     def PolyRoot_eq(r1: PolyRoot | None, r2: PolyRoot | None) -> bool:
         if r1 is None: return False # Infinity is never a separator
         if r2 is None: return False # Infinity is never a separator
         return r1.idx == r2.idx and r1.poly == r2.poly
     def AxisBound_eq(ab1: AxisBound, ab2: AxisBound) -> bool:
-        return _eq_or_none(ab1.cell_lo, ab2.cell_lo) and \
-               _eq_or_none(ab1.cell_hi, ab2.cell_hi)
+        return (ab1.cell_lo is ab2.cell_lo or PolyRoot_eq(ab1.cell_lo, ab2.cell_lo)) and \
+               (ab1.cell_hi is ab2.cell_hi or PolyRoot_eq(ab1.cell_hi, ab2.cell_hi))
     def Cell_eq(c1: Cell, c2: Cell) -> bool:
         return all(AxisBound_eq(ab1, ab2) for ab1, ab2 in zip(c1, c2))
-    # While there's certainly a smarter way to find pairs to
-    # merge, no way is more fool-proof than brute force :)
+    def Cell_axis_key(c: Cell, k: int) -> tuple:
+        return tuple(
+            (
+                id(ab.cell_lo.poly) if ab.cell_lo is not None else None,
+                ab.cell_lo.idx if ab.cell_lo is not None else None,
+                id(ab.cell_hi.poly) if ab.cell_hi is not None else None,
+                ab.cell_hi.idx if ab.cell_hi is not None else None,
+            )
+            for i, ab in enumerate(c)
+            if i != k
+        )
     dim = len(cells[0])
-    cells = list(cells)
-    n_merges = [0]*dim
-    while True:
-        merged = False
-        for i in range(len(cells)):
-            c1 = cells[i]
-            if c1 is None: continue
-            for j in range(len(cells)):
-                if j == i: continue
-                c2 = cells[j]
-                if c2 is None: continue
-                k = 0
-                while True:
-                    assert k < dim
-                    if not AxisBound_eq(c1[k], c2[k]): break
-                    k += 1
-                if PolyRoot_eq(c1[k].cell_hi, c2[k].cell_lo) and Cell_eq(c1[k+1:], c2[k+1:]):
-                    # We've got k matching axis bounds, an adjacent pair,
-                    # and matching bounds afterwards. Let's merge.
-                    c1 = list(c1)
-                    c1[k] = AxisBound(c1[k].var, c1[k].point, c1[k].cell_lo, c2[k].cell_hi)
-                    cells[i] = c1
-                    # Mark the cell as absent.
-                    cells[j] = None
-                    merged = True
-                    n_merges[k] += 1
-        cells = [c for c in cells if c is not None]
-        if not merged:
-            log(f"Merges: {n_merges}")
-            return cells
+    face_lo2cells = defaultdict(list)
+    face_hi2cells = defaultdict(list)
+    remaining_cells = set()
+    todo = list(cells)
+    cells = []
+    ntodo0 = len(todo)
+    while todo:
+        trace_progress(ntodo0 - len(todo), ntodo0)
+        c = todo.pop()
+        merged = None
+        for k in range(dim):
+            kkey = Cell_axis_key(c, k)
+            # Try to find cells to merge with along dimension k from below.
+            if c[k].cell_lo is not None:
+                face_lo = (k, id(c[k].cell_lo.poly), c[k].cell_lo.idx, kkey)
+                candidates = face_hi2cells.get(face_lo)
+                if candidates is not None:
+                    for idx in candidates:
+                        c0 = cells[idx]
+                        assert PolyRoot_eq(c0[k].cell_hi, c[k].cell_lo)
+                        assert Cell_eq(c0[:k], c[:k])
+                        assert Cell_eq(c0[k+1:], c[k+1:])
+                        c = list(c)
+                        c[k] = AxisBound(c0[k].var, c0[k].point, c0[k].cell_lo, c[k].cell_hi)
+                        merged = (c, idx)
+                        break
+            # Try to find cells to merge with along dimension k from above.
+            if merged is None and c[k].cell_hi is not None:
+                face_hi = (k, id(c[k].cell_hi.poly), c[k].cell_hi.idx, kkey)
+                candidates = face_lo2cells.get(face_hi)
+                if candidates is not None:
+                    for idx in candidates:
+                        c2 = cells[idx]
+                        assert PolyRoot_eq(c[k].cell_hi, c2[k].cell_lo)
+                        assert Cell_eq(c[:k], c2[:k])
+                        assert Cell_eq(c[k+1:], c2[k+1:])
+                        c = list(c)
+                        c[k] = AxisBound(c2[k].var, c2[k].point, c[k].cell_lo, c2[k].cell_hi)
+                        merged = (c, idx)
+                        break
+            if merged is not None:
+                break
+        if merged is not None:
+            # Enqueue the combined cell, and remove the one that
+            # was merged from the tables.
+            c, idx = merged
+            todo.append(c)
+            cx = cells[idx]
+            for k in range(dim):
+                kkey = Cell_axis_key(cx, k)
+                if cx[k].cell_lo is not None:
+                    face_lo = (k, id(cx[k].cell_lo.poly), cx[k].cell_lo.idx, kkey)
+                    face_lo2cells[face_lo].remove(idx)
+                if cx[k].cell_hi is not None:
+                    face_hi = (k, id(cx[k].cell_hi.poly), cx[k].cell_hi.idx)
+                    face_hi2cells[face_hi].append(idx)
+            remaining_cells.remove(idx)
+        else:
+            # No merge. Add the new cell to the tables.
+            idx = len(cells)
+            cells.append(c)
+            for k in range(dim):
+                kkey = Cell_axis_key(c, k)
+                if c[k].cell_lo is not None:
+                    face_lo = (k, id(c[k].cell_lo.poly), c[k].cell_lo.idx, kkey)
+                    face_lo2cells[face_lo].append(idx)
+                if c[k].cell_hi is not None:
+                    face_hi = (k, id(c[k].cell_hi.poly), c[k].cell_hi.idx, kkey)
+                    face_hi2cells[face_hi].append(idx)
+            remaining_cells.add(idx)
+    # Return the remaining cells, skipping merged ones.
+    return [cells[idx] for idx in sorted(remaining_cells)]
 
 from gcad_ext import PR, SFRP, SFRP_PR, RSFC

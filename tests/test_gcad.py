@@ -164,35 +164,35 @@ def test_hypercube_5():
     cells = merge(cells)
     assert len(cells) == 2
     # 0 < x < 1
-    assert cells[0][0].cell_lo.poly == sp.Poly(x, x)
-    assert cells[0][0].cell_lo.idx == 0
-    assert cells[0][0].cell_hi.poly == sp.Poly(x-1, x)
-    assert cells[0][0].cell_hi.idx == 0
-    # 0 < y < Sqrt[1 - x^2]
-    assert cells[0][1].cell_lo.poly == sp.Poly(y, x, y)
-    assert cells[0][1].cell_lo.idx == 0
-    assert cells[0][1].cell_hi.poly == sp.Poly(y**2-(1-x**2), x, y)
-    assert cells[0][1].cell_hi.idx == 1
-    # 0 < z < 1
-    assert cells[0][2].cell_lo.poly == sp.Poly(z, x, y, z)
-    assert cells[0][2].cell_lo.idx == 0
-    assert cells[0][2].cell_hi.poly == sp.Poly(z-1, x, y, z)
-    assert cells[0][2].cell_hi.idx == 0
-    # 0 < x < 1
     assert cells[1][0].cell_lo.poly == sp.Poly(x, x)
     assert cells[1][0].cell_lo.idx == 0
     assert cells[1][0].cell_hi.poly == sp.Poly(x-1, x)
     assert cells[1][0].cell_hi.idx == 0
-    # Sqrt[1 - x^2] < y < 1
-    assert cells[1][1].cell_lo.poly == sp.Poly(y**2-(1-x**2), x, y)
-    assert cells[1][1].cell_lo.idx == 1
-    assert cells[1][1].cell_hi.poly == sp.Poly(y-1, x, y)
-    assert cells[1][1].cell_hi.idx == 0
-    # 0 < z < Sqrt[2 - x^2 - y^2]
+    # 0 < y < Sqrt[1 - x^2]
+    assert cells[1][1].cell_lo.poly == sp.Poly(y, x, y)
+    assert cells[1][1].cell_lo.idx == 0
+    assert cells[1][1].cell_hi.poly == sp.Poly(y**2-(1-x**2), x, y)
+    assert cells[1][1].cell_hi.idx == 1
+    # 0 < z < 1
     assert cells[1][2].cell_lo.poly == sp.Poly(z, x, y, z)
     assert cells[1][2].cell_lo.idx == 0
-    assert cells[1][2].cell_hi.poly == sp.Poly(z**2-(2-x**2-y**2), x, y, z)
-    assert cells[1][2].cell_hi.idx == 1
+    assert cells[1][2].cell_hi.poly == sp.Poly(z-1, x, y, z)
+    assert cells[1][2].cell_hi.idx == 0
+    # 0 < x < 1
+    assert cells[0][0].cell_lo.poly == sp.Poly(x, x)
+    assert cells[0][0].cell_lo.idx == 0
+    assert cells[0][0].cell_hi.poly == sp.Poly(x-1, x)
+    assert cells[0][0].cell_hi.idx == 0
+    # Sqrt[1 - x^2] < y < 1
+    assert cells[0][1].cell_lo.poly == sp.Poly(y**2-(1-x**2), x, y)
+    assert cells[0][1].cell_lo.idx == 1
+    assert cells[0][1].cell_hi.poly == sp.Poly(y-1, x, y)
+    assert cells[0][1].cell_hi.idx == 0
+    # 0 < z < Sqrt[2 - x^2 - y^2]
+    assert cells[0][2].cell_lo.poly == sp.Poly(z, x, y, z)
+    assert cells[0][2].cell_lo.idx == 0
+    assert cells[0][2].cell_hi.poly == sp.Poly(z**2-(2-x**2-y**2), x, y, z)
+    assert cells[0][2].cell_hi.idx == 1
 
 def test_massive_triangle():
     s, x0, x1 = sp.symbols("s x0 x1")
@@ -285,10 +285,10 @@ def test_massless_planar_elliptic():
     assert greedy_variables == [x4, x3, x2, x6, x5, x1, x0]
     cells = GCAD(problem, greedy_variables)
     assert len(cells) == 138678
-    # TODO: too slow to compute merged cells
     # mathematica: 793 cells in 561 seconds
-    #merged_cells = merge(cells)
-    #assert len(cells) == ???
+    merged_cells = merge(cells)
+    assert len(merged_cells) == 104
+    # TODO: verify the cell count!
 
 @pytest.mark.slow
 def test_elliptic2l_physical():
@@ -303,7 +303,9 @@ def test_elliptic2l_physical():
     assert greedy_variables == [t, pp4, s, x6, x3, x5, x1, x0, x4, x2]
     cells = GCAD(problem, greedy_variables)
     assert len(cells) == 28794
-    # TODO: too slow to compute merged cells
+    merged_cells = merge(cells)
+    assert len(merged_cells) == 2
+    # TODO: verify the cell count!
     
 @pytest.mark.slow
 def test_ex_e5():
@@ -320,29 +322,27 @@ def test_ex_e5():
     assert greedy_variables == [p1s, x4, x5, x3, x2, x1, x0]
     cells = GCAD(problem1, greedy_variables)
     assert len(cells) == 0
-    mcells = merge(cells)
-    assert len(mcells) == 0
+    merged_cells = merge(cells)
+    assert len(merged_cells) == 0
     cells = GCAD(problem2, greedy_variables)
     assert len(cells) == 25160
-    # TODO: too slow to compute merged cells
     # mathematica: 1 cell in 17 seconds
-    #mcells = merge(cells)
-    #assert len(mcells) == 1
+    merged_cells = merge(cells)
+    assert len(merged_cells) == 1
     # Above 2-particle on-shell threshold in p1s
     problem3 = [ ff < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, p1s > 4, p1s < 16]
     problem4 = [ ff > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, p1s > 4, p1s < 16]
     cells = GCAD(problem3, greedy_variables)
     assert len(cells) == 31457
-    # TODO: too slow to compute merged cells
     # mathematica: X cells in Y seconds (too slow to determine)
-    #mcells = merge(cells)
-    #assert len(mcells) == 0
+    merged_cells = merge(cells)
+    assert len(merged_cells) == 45
     cells = GCAD(problem4, greedy_variables)
     assert len(cells) == 105322
-    # TODO: too slow to compute merged cells
     # mathematica: X cells in Y seconds (too slow to determine)
-    #mcells = merge(cells)
-    #assert len(mcells) == 0
+    merged_cells = merge(cells)
+    assert len(merged_cells) == 99
+    # TODO: verify the cell count!
 
 def test_melih_box():
     # Double box integral provided by Melih Ozcelik
