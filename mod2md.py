@@ -154,7 +154,9 @@ def wr_module(mod: types.ModuleType):
         raise ValueError(f"Can't document {mod.__name__}.{name} (a {type(value)})")
 
 if __name__ == "__main__":
-
-    mod = importlib.import_module("gcad")
+    if len(sys.argv) != 2:
+        print(f"Usage: {sys.argv[0]} module_name", file=sys.stderr)
+        exit(1)
+    mod = importlib.import_module(sys.argv[1])
     prewr_module(mod)
     wr_module(mod)
