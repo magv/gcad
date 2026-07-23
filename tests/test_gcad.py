@@ -278,78 +278,124 @@ def test_ex415_bnp7():
 def test_massless_planar_elliptic():
     # Example of a planar massless elliptic integral
     x0, x1, x2, x3, x4, x5, x6 = sp.symbols("x0 x1 x2 x3 x4 x5 x6")
-    p1 = 7*x0*x1*x2 + 7*x0*x1*x3 - 23*x0*x2*x3 - 23*x1*x2*x3 + 7*x0*x1*x4 + 29*x0*x2*x4 + 29*x1*x2*x4 + 31*x0*x3*x4 + 31*x1*x3*x4 - 2*x0*x2*x5 - 3*x1*x2*x5 - 2*x0*x3*x5 - 3*x1*x3*x5 - 23*x2*x3*x5 - 2*x0*x4*x5 - 3*x1*x4*x5 + 29*x2*x4*x5 + 31*x3*x4*x5 + 7*x0*x1*x6 + 11*x0*x2*x6 - 13*x0*x3*x6 - 17*x1*x3*x6 - 23*x2*x3*x6 + 41*x0*x4*x6 + 19*x1*x4*x6 + 29*x2*x4*x6 + 31*x3*x4*x6 - 2*x0*x5*x6 - 3*x1*x5*x6 + 5*x2*x5*x6 + 37*x3*x5*x6
-    problem = [ p1 > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0]
+    F = 7*x0*x1*x2 + 7*x0*x1*x3 - 23*x0*x2*x3 - 23*x1*x2*x3 + 7*x0*x1*x4 + 29*x0*x2*x4 + 29*x1*x2*x4 + 31*x0*x3*x4 + 31*x1*x3*x4 - 2*x0*x2*x5 - 3*x1*x2*x5 - 2*x0*x3*x5 - 3*x1*x3*x5 - 23*x2*x3*x5 - 2*x0*x4*x5 - 3*x1*x4*x5 + 29*x2*x4*x5 + 31*x3*x4*x5 + 7*x0*x1*x6 + 11*x0*x2*x6 - 13*x0*x3*x6 - 17*x1*x3*x6 - 23*x2*x3*x6 + 41*x0*x4*x6 + 19*x1*x4*x6 + 29*x2*x4*x6 + 31*x3*x4*x6 - 2*x0*x5*x6 - 3*x1*x5*x6 + 5*x2*x5*x6 + 37*x3*x5*x6
+    problem1 = [ F < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0]
+    problem2 = [ F > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0]
     variables = [[x0, x1, x2, x3, x4, x5, x6]]
-    greedy_variables = greedy_mods_order(problem, variables)
+    greedy_variables = greedy_mods_order(problem1, variables) # greedy_t1_order gives slower ordering
     assert greedy_variables == [x4, x3, x2, x6, x5, x1, x0]
-    cells = GCAD(problem, greedy_variables)
+    cells = GCAD(problem1, greedy_variables)
+    assert len(cells) == 131072
+    mcells = merge(cells)
+    assert len(mcells) == 103 # mathematica: 886 cells in 584 seconds
+    cells = GCAD(problem2, greedy_variables)
     assert len(cells) == 138678
-    # mathematica: 793 cells in 561 seconds
-    merged_cells = merge(cells)
-    assert len(merged_cells) == 104
-    # TODO: verify the cell count!
+    mcells = merge(cells)
+    assert len(mcells) == 104 # mathematica: 793 cells in 662 seconds
+    # TODO: cells counts differ, check cells are valid!
+
+@pytest.mark.slow
+@pytest.mark.intractable
+def test_massless_planar_elliptic_symb():
+    # Example of a planar massless elliptic integral
+    x0, x1, x2, x3, x4, x5, x6 = sp.symbols("x0 x1 x2 x3 x4 x5 x6")
+    ss1, ss2, ss4, ss5, ss12, ss23, ss34, ss56, ss61, ss45, ss123, ss234, ss345 = sp.symbols("ss1 ss2 ss4 ss5 ss12 ss23 ss34 ss56 ss61 ss45 ss123 ss234 ss345")
+    F = ss2*x0*x1*x2 + ss2*x0*x1*x3 - ss4*x0*x2*x3 - ss4*x1*x2*x3 + ss2*x0*x1*x4 + ss45*x0*x2*x4 + ss45*x1*x2*x4 + ss5*x0*x3*x4 + ss5*x1*x3*x4 - ss1*x0*x2*x5 - ss12*x1*x2*x5 - ss1*x0*x3*x5 - ss12*x1*x3*x5 - ss4*x2*x3*x5 - ss1*x0*x4*x5 - ss12*x1*x4*x5 + ss45*x2*x4*x5 + ss5*x3*x4*x5 + ss2*x0*x1*x6 + ss23*x0*x2*x6 - ss234*x0*x3*x6 - ss34*x1*x3*x6 - ss4*x2*x3*x6 + ss61*x0*x4*x6 + ss345*x1*x4*x6 + ss45*x2*x4*x6 + ss5*x3*x4*x6 - ss1*x0*x5*x6 - ss12*x1*x5*x6 + ss123*x2*x5*x6 + ss56*x3*x5*x6
+    problem = [ F > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0, ss1 > 0, ss2 > 0, ss4 > 0, ss5 > 0, ss12 > 0, ss23 > 0, ss34 > 0, ss56 > 0, ss61 > 0, ss45 > 0, ss123 > 0, ss234 > 0, ss345 > 0]
+    variables = [[ss1, ss2, ss4, ss5, ss12, ss23, ss34, ss56, ss61, ss45, ss123, ss234, ss345], [x0, x1, x2, x3, x4, x5, x6]]
+    greedy_variables = greedy_mods_order(problem, variables) # TODO: example too slow to complete
+    #assert greedy_variables == [ss1, ss2, ss4, ss5, ss12, ss23, ss34, ss56, ss61, ss45, ss123, ss234, ss345, x0, x1, x2, x3, x4, x5, x6]
+    #cells = GCAD(problem, greedy_variables)
+    #assert len(cells) == 138678
+    #mcells = merge(cells)
+    #assert len(mcells) == 104
 
 @pytest.mark.slow
 def test_elliptic2l_physical():
     # pySecDec example: elliptic2L_physical
     x0, x1, x2, x3, x4, x5, x6 = sp.symbols("x0 x1 x2 x3 x4 x5 x6")
     s, t, pp4, msq = sp.symbols("s t pp4 msq")
-    ff =  + (msq)*x5*x6**2 + (msq)*x4*x6**2 + (2*msq - t)*x4*x5*x6 + (msq)*x4**2*x6 + (msq)*x4**2*x5 + (2*msq - pp4)*x3*x5*x6 + (2*msq - pp4)*x3*x4*x6 + (2*msq)*x3*x4*x5 + (msq)*x3*x4**2 + (msq)*x3**2*x5 + (msq)*x3**2*x4 + (msq)*x1*x6**2 + (2*msq - pp4)*x1*x5*x6 + (2*msq)*x1*x4*x6 + (2*msq)*x1*x4*x5 + (2*msq - pp4)*x1*x3*x6 + (2*msq)*x1*x3*x5 + (2*msq)*x1*x3*x4 + (msq)*x1*x3**2 + (msq)*x1**2*x6 + (msq)*x1**2*x5 + (msq)*x1**2*x3 + (msq)*x0*x6**2 + (2*msq)*x0*x5*x6 + (2*msq)*x0*x4*x6 + (2*msq)*x0*x4*x5 + (2*msq - pp4)*x0*x3*x6 + (2*msq - s)*x0*x3*x5 + (2*msq)*x0*x3*x4 + (msq)*x0*x3**2 + (2*msq - s)*x0*x1*x6 + (2*msq - s)*x0*x1*x5 + (2*msq - s)*x0*x1*x3 + (msq)*x0**2*x6 + (msq)*x0**2*x5 + (msq)*x0**2*x3
-    ff = ff.subs({msq:1})
-    problem = [ ff > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x5 > 0, x6 > 0, pp4 < 4, pp4 > 0, s > 4, t < 0]
-    variables = [[s,t,pp4],[x0, x1, x2, x3, x4, x5, x6]] # interesting to switch x4 <> x5 then gmods takes a long time, t1 is still fast
-    greedy_variables = greedy_t1_order(problem, variables)
-    assert greedy_variables == [t, pp4, s, x6, x3, x5, x1, x0, x4, x2]
-    cells = GCAD(problem, greedy_variables)
-    assert len(cells) == 28794
-    merged_cells = merge(cells)
-    assert len(merged_cells) == 2
-    # TODO: verify the cell count!
+    F =  + (msq)*x5*x6**2 + (msq)*x4*x6**2 + (2*msq - t)*x4*x5*x6 + (msq)*x4**2*x6 + (msq)*x4**2*x5 + (2*msq - pp4)*x3*x5*x6 + (2*msq - pp4)*x3*x4*x6 + (2*msq)*x3*x4*x5 + (msq)*x3*x4**2 + (msq)*x3**2*x5 + (msq)*x3**2*x4 + (msq)*x1*x6**2 + (2*msq - pp4)*x1*x5*x6 + (2*msq)*x1*x4*x6 + (2*msq)*x1*x4*x5 + (2*msq - pp4)*x1*x3*x6 + (2*msq)*x1*x3*x5 + (2*msq)*x1*x3*x4 + (msq)*x1*x3**2 + (msq)*x1**2*x6 + (msq)*x1**2*x5 + (msq)*x1**2*x3 + (msq)*x0*x6**2 + (2*msq)*x0*x5*x6 + (2*msq)*x0*x4*x6 + (2*msq)*x0*x4*x5 + (2*msq - pp4)*x0*x3*x6 + (2*msq - s)*x0*x3*x5 + (2*msq)*x0*x3*x4 + (msq)*x0*x3**2 + (2*msq - s)*x0*x1*x6 + (2*msq - s)*x0*x1*x5 + (2*msq - s)*x0*x1*x3 + (msq)*x0**2*x6 + (msq)*x0**2*x5 + (msq)*x0**2*x3
+    F = F.subs({msq:1})
+    F = F.subs({s:15})
+    F = F.subs({pp4:2})
+    F = F.subs({t:-3})
+    problem1 = [ F < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0]
+    problem2 = [ F > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0]
+    variables = [[x0, x1, x2, x3, x4, x5, x6]]
+    greedy_variables = greedy_t1_order(problem1, variables)
+    assert greedy_variables == [x6, x3, x0, x4, x1, x5, x2] # 173 cells, mathematica: 2602 cells in 112 seconds
+    greedy_variables = greedy_mods_order(problem1, variables)
+    assert greedy_variables == [x6, x3, x1, x4, x0, x5, x2] # 106 cells, mathematica: 916 cells in 103 seconds
+    selected_variables = [x6, x3, x5, x1, x0, x4, x2]
+    cells = GCAD(problem1, selected_variables)
+    assert len(cells) == 135
+    mcells = merge(cells)
+    assert len(mcells) == 3 # mathematica: 3 cells in 2 seconds
+    cells = GCAD(problem2, selected_variables)
+    assert len(cells) == 601
+    mcells = merge(cells)
+    assert len(mcells) == 11 # mathematica: 11 cells in 2 seconds
+
+@pytest.mark.slow
+@pytest.mark.intractable
+def test_elliptic2l_physical_symb():
+    # pySecDec example: elliptic2L_physical
+    x0, x1, x2, x3, x4, x5, x6 = sp.symbols("x0 x1 x2 x3 x4 x5 x6")
+    s, t, pp4, msq = sp.symbols("s t pp4 msq")
+    F =  + (msq)*x5*x6**2 + (msq)*x4*x6**2 + (2*msq - t)*x4*x5*x6 + (msq)*x4**2*x6 + (msq)*x4**2*x5 + (2*msq - pp4)*x3*x5*x6 + (2*msq - pp4)*x3*x4*x6 + (2*msq)*x3*x4*x5 + (msq)*x3*x4**2 + (msq)*x3**2*x5 + (msq)*x3**2*x4 + (msq)*x1*x6**2 + (2*msq - pp4)*x1*x5*x6 + (2*msq)*x1*x4*x6 + (2*msq)*x1*x4*x5 + (2*msq - pp4)*x1*x3*x6 + (2*msq)*x1*x3*x5 + (2*msq)*x1*x3*x4 + (msq)*x1*x3**2 + (msq)*x1**2*x6 + (msq)*x1**2*x5 + (msq)*x1**2*x3 + (msq)*x0*x6**2 + (2*msq)*x0*x5*x6 + (2*msq)*x0*x4*x6 + (2*msq)*x0*x4*x5 + (2*msq - pp4)*x0*x3*x6 + (2*msq - s)*x0*x3*x5 + (2*msq)*x0*x3*x4 + (msq)*x0*x3**2 + (2*msq - s)*x0*x1*x6 + (2*msq - s)*x0*x1*x5 + (2*msq - s)*x0*x1*x3 + (msq)*x0**2*x6 + (msq)*x0**2*x5 + (msq)*x0**2*x3
+    F = F.subs({msq:1})
+    problem1 = [ F < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0, pp4 < 4, pp4 > 0, s > 4, t < 0]
+    problem2 = [ F > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0, pp4 < 4, pp4 > 0, s > 4, t < 0]
+    variables = [[s,t,pp4],[x0, x1, x2, x3, x4, x5, x6]]
+    greedy_variables = greedy_t1_order(problem1, variables) # TODO: example too slow to complete
+    #assert greedy_variables == [t, pp4, s, x6, x3, x5, x1, x0, x4, x2]
+    selected_variables = [t, pp4, s, x6, x3, x5, x1, x0, x4, x2]
+    cells = GCAD(problem1, selected_variables) # TODO: example too slow to complete
+    #assert len(cells) == 28794
+    #mcells = merge(cells)
+    #assert len(mcells) == 2
     
 @pytest.mark.slow
 def test_ex_e5():
     # Integral E5 from LLSSV25.
     x0, x1, x2, x3, x4, x5 = sp.symbols("x0 x1 x2 x3 x4 x5")
     p1s, ms = sp.symbols("p1s ms")
-    ff =  + (ms)*x2*x3*x5**2 + (2*ms - p1s)*x2*x3*x4*x5 + (ms)*x2*x3*x4**2 + (ms)*x2*x3**2*x5 + (ms)*x2*x3**2*x4 + (ms)*x2**2*x3*x5 + (ms)*x2**2*x3*x4 + (ms)*x1*x3*x5**2 + (2*ms - p1s)*x1*x3*x4*x5 + (ms)*x1*x3*x4**2 + (ms)*x1*x3**2*x5 + (ms)*x1*x3**2*x4 + (ms)*x1*x2*x5**2 + (2*ms - p1s)*x1*x2*x4*x5 + (ms)*x1*x2*x4**2 + (4*ms)*x1*x2*x3*x5 + (4*ms - p1s)*x1*x2*x3*x4 + (ms)*x1*x2*x3**2 + (ms)*x1*x2**2*x5 + (ms)*x1*x2**2*x4 + (ms)*x1*x2**2*x3 + (ms)*x1**2*x3*x5 + (ms)*x1**2*x3*x4 + (ms)*x1**2*x2*x5 + (ms)*x1**2*x2*x4 + (ms)*x1**2*x2*x3 + (ms)*x0*x3*x5**2 + (2*ms - p1s)*x0*x3*x4*x5 + (ms)*x0*x3*x4**2 + (ms)*x0*x3**2*x5 + (ms)*x0*x3**2*x4 + (ms)*x0*x2*x5**2 + (2*ms - p1s)*x0*x2*x4*x5 + (ms)*x0*x2*x4**2 + (4*ms - p1s)*x0*x2*x3*x5 + (4*ms)*x0*x2*x3*x4 + (ms)*x0*x2*x3**2 + (ms)*x0*x2**2*x5 + (ms)*x0*x2**2*x4 + (ms)*x0*x2**2*x3 + (2*ms - p1s)*x0*x1*x3*x5 + (2*ms - p1s)*x0*x1*x3*x4 + (2*ms - p1s)*x0*x1*x2*x5 + (2*ms - p1s)*x0*x1*x2*x4 + (2*ms - p1s)*x0*x1*x2*x3 + (ms)*x0**2*x3*x5 + (ms)*x0**2*x3*x4 + (ms)*x0**2*x2*x5 + (ms)*x0**2*x2*x4 + (ms)*x0**2*x2*x3
-    ff = ff.subs({ms:1})
+    F =  + (ms)*x2*x3*x5**2 + (2*ms - p1s)*x2*x3*x4*x5 + (ms)*x2*x3*x4**2 + (ms)*x2*x3**2*x5 + (ms)*x2*x3**2*x4 + (ms)*x2**2*x3*x5 + (ms)*x2**2*x3*x4 + (ms)*x1*x3*x5**2 + (2*ms - p1s)*x1*x3*x4*x5 + (ms)*x1*x3*x4**2 + (ms)*x1*x3**2*x5 + (ms)*x1*x3**2*x4 + (ms)*x1*x2*x5**2 + (2*ms - p1s)*x1*x2*x4*x5 + (ms)*x1*x2*x4**2 + (4*ms)*x1*x2*x3*x5 + (4*ms - p1s)*x1*x2*x3*x4 + (ms)*x1*x2*x3**2 + (ms)*x1*x2**2*x5 + (ms)*x1*x2**2*x4 + (ms)*x1*x2**2*x3 + (ms)*x1**2*x3*x5 + (ms)*x1**2*x3*x4 + (ms)*x1**2*x2*x5 + (ms)*x1**2*x2*x4 + (ms)*x1**2*x2*x3 + (ms)*x0*x3*x5**2 + (2*ms - p1s)*x0*x3*x4*x5 + (ms)*x0*x3*x4**2 + (ms)*x0*x3**2*x5 + (ms)*x0*x3**2*x4 + (ms)*x0*x2*x5**2 + (2*ms - p1s)*x0*x2*x4*x5 + (ms)*x0*x2*x4**2 + (4*ms - p1s)*x0*x2*x3*x5 + (4*ms)*x0*x2*x3*x4 + (ms)*x0*x2*x3**2 + (ms)*x0*x2**2*x5 + (ms)*x0*x2**2*x4 + (ms)*x0*x2**2*x3 + (2*ms - p1s)*x0*x1*x3*x5 + (2*ms - p1s)*x0*x1*x3*x4 + (2*ms - p1s)*x0*x1*x2*x5 + (2*ms - p1s)*x0*x1*x2*x4 + (2*ms - p1s)*x0*x1*x2*x3 + (ms)*x0**2*x3*x5 + (ms)*x0**2*x3*x4 + (ms)*x0**2*x2*x5 + (ms)*x0**2*x2*x4 + (ms)*x0**2*x2*x3
+    F = F.subs({ms:1})
     # Below threshold
-    problem1 = [ ff < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, p1s < 4]
-    problem2 = [ ff > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, p1s < 4]
+    problem1 = [ F < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, p1s < 4]
+    problem2 = [ F > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, p1s < 4]
     variables = [[p1s],[x0, x1, x2, x3, x4, x5]]
     greedy_variables = greedy_t1_order(problem1, variables)
     assert greedy_variables == [p1s, x4, x5, x3, x2, x1, x0]
     cells = GCAD(problem1, greedy_variables)
     assert len(cells) == 0
-    merged_cells = merge(cells)
-    assert len(merged_cells) == 0
+    mcells = merge(cells)
+    assert len(mcells) == 0
     cells = GCAD(problem2, greedy_variables)
     assert len(cells) == 25160
-    # mathematica: 1 cell in 17 seconds
-    merged_cells = merge(cells)
-    assert len(merged_cells) == 1
+    mcells = merge(cells)
+    assert len(mcells) == 1 # mathematica: 1 cell in 17 seconds
     # Above 2-particle on-shell threshold in p1s
-    problem3 = [ ff < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, p1s > 4, p1s < 16]
-    problem4 = [ ff > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, p1s > 4, p1s < 16]
+    problem3 = [ F < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, p1s > 4, p1s < 16]
+    problem4 = [ F > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, p1s > 4, p1s < 16]
     cells = GCAD(problem3, greedy_variables)
     assert len(cells) == 31457
-    # mathematica: X cells in Y seconds (too slow to determine)
-    merged_cells = merge(cells)
-    assert len(merged_cells) == 45
+    mcells = merge(cells)
+    assert len(mcells) == 45 # mathematica: X cells in Y seconds (too slow to determine)
     cells = GCAD(problem4, greedy_variables)
     assert len(cells) == 105322
-    # mathematica: X cells in Y seconds (too slow to determine)
-    merged_cells = merge(cells)
-    assert len(merged_cells) == 99
+    mcells = merge(cells)
+    assert len(mcells) == 99 # mathematica: X cells in Y seconds (too slow to determine)
     # TODO: verify the cell count!
 
 def test_melih_box():
     # Double box integral provided by Melih Ozcelik
     x1, x2, x3, x4, x5, x6, x7 = sp.symbols("x1 x2 x3 x4 x5 x6 x7")
-    ff = -4*x1*x4*x5 + 2*x1*x3*x6 + 2*x2*x3*x6 + 2*x2*x5*x6 + 2*x3*x5*x6 + x1*x6**2 + x2*x6**2 + x5*x6**2 + 2*x2*x3*x7 + 2*x2*x4*x7 + 2*x2*x5*x7 + 2*x3*x5*x7 + 2*x2*x6*x7 + 2*x3*x6*x7 + 2*x5*x6*x7 + x6**2*x7 + x3*x7**2 + x4*x7**2 + x5*x7**2 + x6*x7**2
-    problem1 = [ ff < 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 >0, x7 > 0]
-    problem2 = [ ff > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 >0, x7 > 0]
+    F = -4*x1*x4*x5 + 2*x1*x3*x6 + 2*x2*x3*x6 + 2*x2*x5*x6 + 2*x3*x5*x6 + x1*x6**2 + x2*x6**2 + x5*x6**2 + 2*x2*x3*x7 + 2*x2*x4*x7 + 2*x2*x5*x7 + 2*x3*x5*x7 + 2*x2*x6*x7 + 2*x3*x6*x7 + 2*x5*x6*x7 + x6**2*x7 + x3*x7**2 + x4*x7**2 + x5*x7**2 + x6*x7**2
+    problem1 = [ F < 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 >0, x7 > 0]
+    problem2 = [ F > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 >0, x7 > 0]
     variables = [[x1, x2, x3, x4, x5, x6, x7]]
     greedy_variables = greedy_t1_order(problem1, variables)
     assert greedy_variables == [x7, x5, x6, x3, x4, x2, x1]
@@ -361,9 +407,9 @@ def test_melih_box():
 def test_triangle2l_split():
     # pySecDec example: triangle2L_split
     x0, x1, x2, x3, x4, x5 = sp.symbols("x0 x1 x2 x3 x4 x5")
-    ff = + (1)*x3**2*x5 + (1)*x3**2*x4 + (1)*x2*x3*x5 + (1)*x2*x3*x4 + (1)*x1*x3*x5 + (1)*x1*x3*x4 + (1)*x1*x3**2 + (-1)*x1*x2*x4 + (1)*x1*x2*x3 + (1)*x0*x3*x4 + (1)*x0*x3**2 + (1)*x0*x2*x3 + (-1)*x0*x1*x5 + (-1)*x0*x1*x4 + (-1)*x0*x1*x3 + (-1)*x0*x1*x2
-    problem1 = [ ff < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0]
-    problem2 = [ ff > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0]
+    F = + (1)*x3**2*x5 + (1)*x3**2*x4 + (1)*x2*x3*x5 + (1)*x2*x3*x4 + (1)*x1*x3*x5 + (1)*x1*x3*x4 + (1)*x1*x3**2 + (-1)*x1*x2*x4 + (1)*x1*x2*x3 + (1)*x0*x3*x4 + (1)*x0*x3**2 + (1)*x0*x2*x3 + (-1)*x0*x1*x5 + (-1)*x0*x1*x4 + (-1)*x0*x1*x3 + (-1)*x0*x1*x2
+    problem1 = [ F < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0]
+    problem2 = [ F > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0]
     variables = [[x0, x1, x2, x3, x4, x5]]
     greedy_variables = greedy_t1_order(problem1, variables)
     assert greedy_variables == [x3, x1, x0, x2, x4, x5]
@@ -377,27 +423,27 @@ def test_triangle2l_split():
 def test_gluza_ex30():
     # Example lh_np30 from [2201.02576] provided by Krzysztof Grzanka/Janus Gluza on 12.08.2025
     x0, x1, x2, x3, x4, x5, x6, x7 = sp.symbols("x0 x1 x2 x3 x4 x5 x6 x7")
-    ff = + (-1)*x4*x5*x6*x7 + (-1)*x3*x4*x6*x7 + (-1)*x3*x4*x5*x7 + (1)*x3*x4*x5*x6 + (1)*x3**2*x6*x7 + (1)*x3**2*x5*x7 + (1)*x3**2*x5*x6 + (1)*x3**2*x4*x6 + (1)*x3**2*x4*x5 + (-1)*x2*x4*x6*x7 + (-1)*x2*x4*x5*x6 + (-1)*x2*x3*x4*x7 + (-1)*x2*x3*x4*x5 + (1)*x2*x3**2*x7 + (1)*x2*x3**2*x5 + (1)*x2*x3**2*x4 + (-1)*x1*x4*x6*x7 + (-1)*x1*x4*x5*x7 + (1)*x1*x3*x4*x6 + (1)*x1*x3*x4*x5 + (1)*x1*x3**2*x6 + (1)*x1*x3**2*x5 + (-1)*x1*x2*x4*x7 + (-1)*x1*x2*x4*x6 + (-1)*x1*x2*x4*x5 + (1)*x1*x2*x3*x4 + (1)*x1*x2*x3**2 + (-1)*x0*x5*x6*x7 + (-1)*x0*x4*x5*x7 + (-1)*x0*x4*x5*x6 + (-1)*x0*x3*x6*x7 + (1)*x0*x3*x5*x7 + (-1)*x0*x3*x5*x6 + (-1)*x0*x3*x4*x7 + (-1)*x0*x3*x4*x6 + (1)*x0*x3**2*x7 + (1)*x0*x3**2*x5 + (1)*x0*x3**2*x4 + (-1)*x0*x2*x6*x7 + (-1)*x0*x2*x5*x6 + (-1)*x0*x2*x4*x7 + (-1)*x0*x2*x4*x6 + (-1)*x0*x2*x4*x5 + (1)*x0*x2*x3*x7 + (1)*x0*x2*x3*x5 + (1)*x0*x2*x3*x4 + (-1)*x0*x1*x6*x7 + (-1)*x0*x1*x5*x7 + (-1)*x0*x1*x4*x7 + (-1)*x0*x1*x4*x6 + (-1)*x0*x1*x4*x5 + (-1)*x0*x1*x3*x6 + (-1)*x0*x1*x3*x5 + (1)*x0*x1*x3*x4 + (1)*x0*x1*x3**2 + (-1)*x0*x1*x2*x7 + (-1)*x0*x1*x2*x6 + (-1)*x0*x1*x2*x5 + (1)*x0*x1*x2*x3
-    ff = ff.subs({x3:1}) # t1/mods is very slow with x3 active
-    problem1 = [ ff < 0, x0 > 0, x1 > 0, x2 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0]
-    problem2 = [ ff > 0, x0 > 0, x1 > 0, x2 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0]
+    F = + (-1)*x4*x5*x6*x7 + (-1)*x3*x4*x6*x7 + (-1)*x3*x4*x5*x7 + (1)*x3*x4*x5*x6 + (1)*x3**2*x6*x7 + (1)*x3**2*x5*x7 + (1)*x3**2*x5*x6 + (1)*x3**2*x4*x6 + (1)*x3**2*x4*x5 + (-1)*x2*x4*x6*x7 + (-1)*x2*x4*x5*x6 + (-1)*x2*x3*x4*x7 + (-1)*x2*x3*x4*x5 + (1)*x2*x3**2*x7 + (1)*x2*x3**2*x5 + (1)*x2*x3**2*x4 + (-1)*x1*x4*x6*x7 + (-1)*x1*x4*x5*x7 + (1)*x1*x3*x4*x6 + (1)*x1*x3*x4*x5 + (1)*x1*x3**2*x6 + (1)*x1*x3**2*x5 + (-1)*x1*x2*x4*x7 + (-1)*x1*x2*x4*x6 + (-1)*x1*x2*x4*x5 + (1)*x1*x2*x3*x4 + (1)*x1*x2*x3**2 + (-1)*x0*x5*x6*x7 + (-1)*x0*x4*x5*x7 + (-1)*x0*x4*x5*x6 + (-1)*x0*x3*x6*x7 + (1)*x0*x3*x5*x7 + (-1)*x0*x3*x5*x6 + (-1)*x0*x3*x4*x7 + (-1)*x0*x3*x4*x6 + (1)*x0*x3**2*x7 + (1)*x0*x3**2*x5 + (1)*x0*x3**2*x4 + (-1)*x0*x2*x6*x7 + (-1)*x0*x2*x5*x6 + (-1)*x0*x2*x4*x7 + (-1)*x0*x2*x4*x6 + (-1)*x0*x2*x4*x5 + (1)*x0*x2*x3*x7 + (1)*x0*x2*x3*x5 + (1)*x0*x2*x3*x4 + (-1)*x0*x1*x6*x7 + (-1)*x0*x1*x5*x7 + (-1)*x0*x1*x4*x7 + (-1)*x0*x1*x4*x6 + (-1)*x0*x1*x4*x5 + (-1)*x0*x1*x3*x6 + (-1)*x0*x1*x3*x5 + (1)*x0*x1*x3*x4 + (1)*x0*x1*x3**2 + (-1)*x0*x1*x2*x7 + (-1)*x0*x1*x2*x6 + (-1)*x0*x1*x2*x5 + (1)*x0*x1*x2*x3
+    F = F.subs({x3:1}) # t1/mods is very slow with x3 active
+    problem1 = [ F < 0, x0 > 0, x1 > 0, x2 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0]
+    problem2 = [ F > 0, x0 > 0, x1 > 0, x2 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0]
     variables = [[x0, x1, x2, x4, x5, x6, x7]]
     greedy_variables = greedy_t1_order(problem1, variables)
     assert greedy_variables == [x0, x6, x4, x2, x5, x7, x1]
-    mcells = merge(GCAD(problem1, greedy_variables))
-    #assert len(mcells) == 7 # TODO: example too slow to complete
+    mcells = merge(GCAD(problem1, greedy_variables)) # TODO: example too slow to complete
+    #assert len(mcells) == 7
     mcells = merge(GCAD(problem2, greedy_variables))
-    #assert len(mcells) == 10 # TODO: example too slow to complete
+    #assert len(mcells) == 10
 
 @pytest.mark.slow
 @pytest.mark.intractable
 def test_gluza_ex33():
     # Example 33-35 from [2201.02576] provided by Krzysztof Grzanka/Janus Gluza on 12.08.2025
     MT, x0, x1, x2, x3, x4, x5, x6, x7 = sp.symbols("MT x0 x1 x2 x3 x4 x5 x6 x7")
-    ff = + (MT**2)*x5*x6*x7**2 + (MT**2)*x5*x6**2*x7 + (2*MT**2 - 1)*x4*x5*x6*x7 + (MT**2)*x4*x5*x6**2 + (MT**2)*x4**2*x5*x6 + (MT**2)*x3*x6*x7**2 + (MT**2)*x3*x6**2*x7 + (MT**2)*x3*x5*x7**2 + (2*MT**2 - 1)*x3*x5*x6*x7 + (MT**2)*x3*x5*x6**2 + (2*MT**2 - 1)*x3*x4*x6*x7 + (MT**2)*x3*x4*x6**2 + (2*MT**2 - 1)*x3*x4*x5*x7 + (2*MT**2)*x3*x4*x5*x6 + (MT**2)*x3*x4**2*x6 + (MT**2)*x3*x4**2*x5 + (MT**2)*x2*x6*x7**2 + (MT**2)*x2*x6**2*x7 + (2*MT**2)*x2*x5*x6*x7 + (MT**2)*x2*x5*x6**2 + (2*MT**2 - 1)*x2*x4*x6*x7 + (MT**2)*x2*x4*x6**2 + (2*MT**2 - 1)*x2*x4*x5*x6 + (MT**2)*x2*x4**2*x6 + (MT**2)*x2*x3*x7**2 + (2*MT**2 - 1)*x2*x3*x6*x7 + (2*MT**2)*x2*x3*x5*x7 + (2*MT**2 - 1)*x2*x3*x5*x6 + (2*MT**2 - 1)*x2*x3*x4*x7 + (2*MT**2 - 1)*x2*x3*x4*x6 + (2*MT**2 - 1)*x2*x3*x4*x5 + (MT**2)*x2*x3*x4**2 + (MT**2)*x2**2*x6*x7 + (MT**2)*x2**2*x5*x6 + (MT**2)*x2**2*x4*x6 + (MT**2)*x2**2*x3*x7 + (MT**2)*x2**2*x3*x5 + (MT**2)*x2**2*x3*x4 + (MT**2)*x1*x6*x7**2 + (MT**2)*x1*x6**2*x7 + (MT**2)*x1*x5*x7**2 + (2*MT**2)*x1*x5*x6*x7 + (2*MT**2 - 1)*x1*x4*x6*x7 + (MT**2)*x1*x4*x6**2 + (2*MT**2 - 1)*x1*x4*x5*x7 + (2*MT**2)*x1*x4*x5*x6 + (MT**2)*x1*x4**2*x6 + (MT**2)*x1*x4**2*x5 + (2*MT**2 - 1)*x1*x3*x6*x7 + (MT**2)*x1*x3*x6**2 + (2*MT**2 - 1)*x1*x3*x5*x7 + (2*MT**2)*x1*x3*x5*x6 + (2*MT**2)*x1*x3*x4*x6 + (2*MT**2)*x1*x3*x4*x5 + (MT**2)*x1*x2*x7**2 + (4*MT**2)*x1*x2*x6*x7 + (MT**2)*x1*x2*x6**2 + (2*MT**2)*x1*x2*x5*x7 + (2*MT**2)*x1*x2*x5*x6 + (2*MT**2 - 1)*x1*x2*x4*x7 + (4*MT**2 - 1)*x1*x2*x4*x6 + (2*MT**2 - 1)*x1*x2*x4*x5 + (MT**2)*x1*x2*x4**2 + (2*MT**2 - 1)*x1*x2*x3*x7 + (2*MT**2 - 1)*x1*x2*x3*x6 + (2*MT**2 - 1)*x1*x2*x3*x5 + (2*MT**2)*x1*x2*x3*x4 + (MT**2)*x1*x2**2*x7 + (MT**2)*x1*x2**2*x6 + (MT**2)*x1*x2**2*x5 + (MT**2)*x1*x2**2*x4 + (MT**2)*x1*x2**2*x3 + (MT**2)*x1**2*x6*x7 + (MT**2)*x1**2*x5*x7 + (MT**2)*x1**2*x4*x6 + (MT**2)*x1**2*x4*x5 + (MT**2)*x1**2*x3*x6 + (MT**2)*x1**2*x3*x5 + (MT**2)*x1**2*x2*x7 + (MT**2)*x1**2*x2*x6 + (MT**2)*x1**2*x2*x5 + (MT**2)*x1**2*x2*x4 + (MT**2)*x1**2*x2*x3 + (MT**2)*x0*x5*x7**2 + (2*MT**2 - 1)*x0*x5*x6*x7 + (2*MT**2 - 1)*x0*x4*x5*x7 + (2*MT**2 - 1)*x0*x4*x5*x6 + (MT**2)*x0*x4**2*x5 + (MT**2)*x0*x3*x7**2 + (2*MT**2 - 1)*x0*x3*x6*x7 + (2*MT**2)*x0*x3*x5*x7 + (2*MT**2 - 1)*x0*x3*x5*x6 + (2*MT**2 - 1)*x0*x3*x4*x7 + (2*MT**2 - 1)*x0*x3*x4*x6 + (2*MT**2 - 1)*x0*x3*x4*x5 + (MT**2)*x0*x3*x4**2 + (MT**2)*x0*x2*x7**2 + (2*MT**2 - 1)*x0*x2*x6*x7 + (2*MT**2)*x0*x2*x5*x7 + (2*MT**2 - 1)*x0*x2*x5*x6 + (2*MT**2 - 1)*x0*x2*x4*x7 + (2*MT**2 - 1)*x0*x2*x4*x6 + (2*MT**2 - 1)*x0*x2*x4*x5 + (MT**2)*x0*x2*x4**2 + (2*MT**2)*x0*x2*x3*x7 + (2*MT**2)*x0*x2*x3*x5 + (2*MT**2)*x0*x2*x3*x4 + (MT**2)*x0*x2**2*x7 + (MT**2)*x0*x2**2*x5 + (MT**2)*x0*x2**2*x4 + (MT**2)*x0*x1*x7**2 + (2*MT**2 - 1)*x0*x1*x6*x7 + (2*MT**2 - 1)*x0*x1*x5*x7 + (2*MT**2 - 1)*x0*x1*x4*x7 + (2*MT**2 - 1)*x0*x1*x4*x6 + (2*MT**2 - 1)*x0*x1*x4*x5 + (MT**2)*x0*x1*x4**2 + (2*MT**2 - 1)*x0*x1*x3*x7 + (2*MT**2 - 1)*x0*x1*x3*x6 + (2*MT**2 - 1)*x0*x1*x3*x5 + (2*MT**2)*x0*x1*x3*x4 + (4*MT**2 - 1)*x0*x1*x2*x7 + (2*MT**2 - 1)*x0*x1*x2*x6 + (2*MT**2 - 1)*x0*x1*x2*x5 + (4*MT**2)*x0*x1*x2*x4 + (2*MT**2)*x0*x1*x2*x3 + (MT**2)*x0*x1*x2**2 + (MT**2)*x0*x1**2*x7 + (MT**2)*x0*x1**2*x4 + (MT**2)*x0*x1**2*x3 + (MT**2)*x0*x1**2*x2 + (MT**2)*x0**2*x5*x7 + (MT**2)*x0**2*x4*x5 + (MT**2)*x0**2*x3*x7 + (MT**2)*x0**2*x3*x5 + (MT**2)*x0**2*x3*x4 + (MT**2)*x0**2*x2*x7 + (MT**2)*x0**2*x2*x5 + (MT**2)*x0**2*x2*x4 + (MT**2)*x0**2*x1*x7 + (MT**2)*x0**2*x1*x4 + (MT**2)*x0**2*x1*x3 + (MT**2)*x0**2*x1*x2
-    ff = ff.subs({MT:1})
-    problem1 = [ ff < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0]
-    problem2 = [ ff > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0]
+    F = + (MT**2)*x5*x6*x7**2 + (MT**2)*x5*x6**2*x7 + (2*MT**2 - 1)*x4*x5*x6*x7 + (MT**2)*x4*x5*x6**2 + (MT**2)*x4**2*x5*x6 + (MT**2)*x3*x6*x7**2 + (MT**2)*x3*x6**2*x7 + (MT**2)*x3*x5*x7**2 + (2*MT**2 - 1)*x3*x5*x6*x7 + (MT**2)*x3*x5*x6**2 + (2*MT**2 - 1)*x3*x4*x6*x7 + (MT**2)*x3*x4*x6**2 + (2*MT**2 - 1)*x3*x4*x5*x7 + (2*MT**2)*x3*x4*x5*x6 + (MT**2)*x3*x4**2*x6 + (MT**2)*x3*x4**2*x5 + (MT**2)*x2*x6*x7**2 + (MT**2)*x2*x6**2*x7 + (2*MT**2)*x2*x5*x6*x7 + (MT**2)*x2*x5*x6**2 + (2*MT**2 - 1)*x2*x4*x6*x7 + (MT**2)*x2*x4*x6**2 + (2*MT**2 - 1)*x2*x4*x5*x6 + (MT**2)*x2*x4**2*x6 + (MT**2)*x2*x3*x7**2 + (2*MT**2 - 1)*x2*x3*x6*x7 + (2*MT**2)*x2*x3*x5*x7 + (2*MT**2 - 1)*x2*x3*x5*x6 + (2*MT**2 - 1)*x2*x3*x4*x7 + (2*MT**2 - 1)*x2*x3*x4*x6 + (2*MT**2 - 1)*x2*x3*x4*x5 + (MT**2)*x2*x3*x4**2 + (MT**2)*x2**2*x6*x7 + (MT**2)*x2**2*x5*x6 + (MT**2)*x2**2*x4*x6 + (MT**2)*x2**2*x3*x7 + (MT**2)*x2**2*x3*x5 + (MT**2)*x2**2*x3*x4 + (MT**2)*x1*x6*x7**2 + (MT**2)*x1*x6**2*x7 + (MT**2)*x1*x5*x7**2 + (2*MT**2)*x1*x5*x6*x7 + (2*MT**2 - 1)*x1*x4*x6*x7 + (MT**2)*x1*x4*x6**2 + (2*MT**2 - 1)*x1*x4*x5*x7 + (2*MT**2)*x1*x4*x5*x6 + (MT**2)*x1*x4**2*x6 + (MT**2)*x1*x4**2*x5 + (2*MT**2 - 1)*x1*x3*x6*x7 + (MT**2)*x1*x3*x6**2 + (2*MT**2 - 1)*x1*x3*x5*x7 + (2*MT**2)*x1*x3*x5*x6 + (2*MT**2)*x1*x3*x4*x6 + (2*MT**2)*x1*x3*x4*x5 + (MT**2)*x1*x2*x7**2 + (4*MT**2)*x1*x2*x6*x7 + (MT**2)*x1*x2*x6**2 + (2*MT**2)*x1*x2*x5*x7 + (2*MT**2)*x1*x2*x5*x6 + (2*MT**2 - 1)*x1*x2*x4*x7 + (4*MT**2 - 1)*x1*x2*x4*x6 + (2*MT**2 - 1)*x1*x2*x4*x5 + (MT**2)*x1*x2*x4**2 + (2*MT**2 - 1)*x1*x2*x3*x7 + (2*MT**2 - 1)*x1*x2*x3*x6 + (2*MT**2 - 1)*x1*x2*x3*x5 + (2*MT**2)*x1*x2*x3*x4 + (MT**2)*x1*x2**2*x7 + (MT**2)*x1*x2**2*x6 + (MT**2)*x1*x2**2*x5 + (MT**2)*x1*x2**2*x4 + (MT**2)*x1*x2**2*x3 + (MT**2)*x1**2*x6*x7 + (MT**2)*x1**2*x5*x7 + (MT**2)*x1**2*x4*x6 + (MT**2)*x1**2*x4*x5 + (MT**2)*x1**2*x3*x6 + (MT**2)*x1**2*x3*x5 + (MT**2)*x1**2*x2*x7 + (MT**2)*x1**2*x2*x6 + (MT**2)*x1**2*x2*x5 + (MT**2)*x1**2*x2*x4 + (MT**2)*x1**2*x2*x3 + (MT**2)*x0*x5*x7**2 + (2*MT**2 - 1)*x0*x5*x6*x7 + (2*MT**2 - 1)*x0*x4*x5*x7 + (2*MT**2 - 1)*x0*x4*x5*x6 + (MT**2)*x0*x4**2*x5 + (MT**2)*x0*x3*x7**2 + (2*MT**2 - 1)*x0*x3*x6*x7 + (2*MT**2)*x0*x3*x5*x7 + (2*MT**2 - 1)*x0*x3*x5*x6 + (2*MT**2 - 1)*x0*x3*x4*x7 + (2*MT**2 - 1)*x0*x3*x4*x6 + (2*MT**2 - 1)*x0*x3*x4*x5 + (MT**2)*x0*x3*x4**2 + (MT**2)*x0*x2*x7**2 + (2*MT**2 - 1)*x0*x2*x6*x7 + (2*MT**2)*x0*x2*x5*x7 + (2*MT**2 - 1)*x0*x2*x5*x6 + (2*MT**2 - 1)*x0*x2*x4*x7 + (2*MT**2 - 1)*x0*x2*x4*x6 + (2*MT**2 - 1)*x0*x2*x4*x5 + (MT**2)*x0*x2*x4**2 + (2*MT**2)*x0*x2*x3*x7 + (2*MT**2)*x0*x2*x3*x5 + (2*MT**2)*x0*x2*x3*x4 + (MT**2)*x0*x2**2*x7 + (MT**2)*x0*x2**2*x5 + (MT**2)*x0*x2**2*x4 + (MT**2)*x0*x1*x7**2 + (2*MT**2 - 1)*x0*x1*x6*x7 + (2*MT**2 - 1)*x0*x1*x5*x7 + (2*MT**2 - 1)*x0*x1*x4*x7 + (2*MT**2 - 1)*x0*x1*x4*x6 + (2*MT**2 - 1)*x0*x1*x4*x5 + (MT**2)*x0*x1*x4**2 + (2*MT**2 - 1)*x0*x1*x3*x7 + (2*MT**2 - 1)*x0*x1*x3*x6 + (2*MT**2 - 1)*x0*x1*x3*x5 + (2*MT**2)*x0*x1*x3*x4 + (4*MT**2 - 1)*x0*x1*x2*x7 + (2*MT**2 - 1)*x0*x1*x2*x6 + (2*MT**2 - 1)*x0*x1*x2*x5 + (4*MT**2)*x0*x1*x2*x4 + (2*MT**2)*x0*x1*x2*x3 + (MT**2)*x0*x1*x2**2 + (MT**2)*x0*x1**2*x7 + (MT**2)*x0*x1**2*x4 + (MT**2)*x0*x1**2*x3 + (MT**2)*x0*x1**2*x2 + (MT**2)*x0**2*x5*x7 + (MT**2)*x0**2*x4*x5 + (MT**2)*x0**2*x3*x7 + (MT**2)*x0**2*x3*x5 + (MT**2)*x0**2*x3*x4 + (MT**2)*x0**2*x2*x7 + (MT**2)*x0**2*x2*x5 + (MT**2)*x0**2*x2*x4 + (MT**2)*x0**2*x1*x7 + (MT**2)*x0**2*x1*x4 + (MT**2)*x0**2*x1*x3 + (MT**2)*x0**2*x1*x2
+    F = F.subs({MT:1})
+    problem1 = [ F < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0]
+    problem2 = [ F > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0]
     variables = [[x0, x1, x2, x3, x4, x5, x6, x7]]
     greedy_variables = greedy_t1_order(problem1, variables)
     #assert greedy_variables == [x0, x6, x4, x2, x3, x5, x7, x1] # TODO: example too slow to complete
