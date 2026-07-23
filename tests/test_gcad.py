@@ -452,6 +452,84 @@ def test_gluza_ex33():
     mcells = merge(GCAD(problem2, greedy_variables))
     #assert len(mcells) == 10 # TODO: example too slow to complete
 
+@pytest.mark.slow
+def test_pentabox_exb():
+    # Two-loop pentabox from Figure 1(b) of [2009.07803]
+    x0, x1, x2, x3, x4, x5, x6, x7 = sp.symbols("x0 x1 x2 x3 x4 x5 x6 x7")
+    s12, s23, s34, s45, s15 = sp.symbols("s12 s23 s34 s45 s15")
+    F = + (-s45)*x4*x5*x7 + (-s45)*x3*x4*x7 + (-s45)*x3*x4*x5 + (-s34)*x2*x6*x7 + (-s12)*x2*x4*x7 + (-s45)*x2*x4*x5 + (-s15)*x1*x6*x7 + (-s23)*x1*x5*x7 + (-s45)*x1*x4*x5 + (-s23)*x1*x3*x7 + (-s23)*x1*x3*x6 + (-s23)*x1*x3*x5 + (-s23)*x1*x3*x4 + (-s45)*x0*x5*x7 + (-s45)*x0*x4*x5 + (-s45)*x0*x3*x7 + (-s45)*x0*x3*x6 + (-s45)*x0*x3*x5 + (-s45)*x0*x3*x4 + (-s12)*x0*x2*x7 + (-s12)*x0*x2*x6 + (-s12)*x0*x2*x5 + (-s12)*x0*x2*x4
+    F = F.subs({s12:6, s23:-5, s34:4, s45:3, s15:-1})
+    problem1 = [F < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0]
+    problem2 = [F > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0]
+    variables = [[x0, x1, x2, x3, x4, x5, x6, x7]]
+    greedy_variables = greedy_mods_order(problem1, variables)
+    assert greedy_variables == [x7, x4, x5, x6, x3, x2, x1, x0]
+    cells = GCAD(problem1, greedy_variables)
+    assert len(cells) == 1845
+    mcells = merge(cells)
+    assert len(mcells) == 7 # mathematica: 7 cells in 2 seconds
+    cells = GCAD(problem2, greedy_variables)
+    assert len(cells) == 881
+    mcells = merge(cells)
+    assert len(mcells) == 3 # mathematica: 3 cells in 2 seconds
+
+@pytest.mark.slow
+@pytest.mark.intractable
+def test_pentabox_exb_symb():
+    # Two-loop pentabox from Figure 1(b) of [2009.07803]
+    x0, x1, x2, x3, x4, x5, x6, x7 = sp.symbols("x0 x1 x2 x3 x4 x5 x6 x7")
+    s12, s23, s34, s45, s15 = sp.symbols("s12 s23 s34 s45 s15")
+    F = + (-s45)*x4*x5*x7 + (-s45)*x3*x4*x7 + (-s45)*x3*x4*x5 + (-s34)*x2*x6*x7 + (-s12)*x2*x4*x7 + (-s45)*x2*x4*x5 + (-s15)*x1*x6*x7 + (-s23)*x1*x5*x7 + (-s45)*x1*x4*x5 + (-s23)*x1*x3*x7 + (-s23)*x1*x3*x6 + (-s23)*x1*x3*x5 + (-s23)*x1*x3*x4 + (-s45)*x0*x5*x7 + (-s45)*x0*x4*x5 + (-s45)*x0*x3*x7 + (-s45)*x0*x3*x6 + (-s45)*x0*x3*x5 + (-s45)*x0*x3*x4 + (-s12)*x0*x2*x7 + (-s12)*x0*x2*x6 + (-s12)*x0*x2*x5 + (-s12)*x0*x2*x4
+    problem1 = [F < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0, s12 > 0, s23 < 0, s34 > 0, s45 > 0, s15 < 0]
+    problem2 = [F > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0, s12 > 0, s23 < 0, s34 > 0, s45 > 0, s15 < 0]
+    variables = [[s12, s23, s34, s45, s15], [x0, x1, x2, x3, x4, x5, x6, x7]]
+    greedy_variables = greedy_t1_order(problem1, variables) # TODO: example too slow to complete
+    #assert greedy_variables == [t, pp4, s, x6, x3, x5, x1, x0, x4, x2]
+    #selected_variables = [t, pp4, s, x6, x3, x5, x1, x0, x4, x2]
+    #cells = GCAD(problem1, selected_variables)
+    #assert len(cells) == 28794
+    #mcells = merge(cells)
+    #assert len(mcells) == 2
+
+@pytest.mark.slow
+def test_pentabox_exd():
+    # Two-loop pentabox from Figure 1(d) of [2009.07803]
+    x0, x1, x2, x3, x4, x5, x6, x7 = sp.symbols("x0 x1 x2 x3 x4 x5 x6 x7")
+    s12, s23, s34, s45, s15 = sp.symbols("s12 s23 s34 s45 s15")
+    F = -(s12*x0*x2*x4) - s45*x0*x3*x4 - s23*x1*x3*x4 - s12*x0*x2*x5 - s45*x0*x3*x5 - s23*x1*x3*x5 - s12*x0*x2*x6 - s45*x0*x3*x6 - s23*x1*x3*x6 - s12*x2*x4*x6 - s45*x3*x4*x6 - s15*x1*x5*x6 - s34*x2*x5*x6 - s12*x0*x2*x7 - s45*x0*x3*x7 - s23*x1*x3*x7 + (s15 - s23 + s45)*x1*x4*x7 + (-s12 + s34 + s45)*x2*x4*x7 - s45*x0*x5*x7 - s23*x1*x5*x7
+    F = F.subs({s12:6, s23:-5, s34:4, s45:3, s15:-1})
+    problem1 = [F < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0]
+    problem2 = [F > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0]
+    variables = [[x0, x1, x2, x3, x4, x5, x6, x7]]
+    greedy_variables = greedy_mods_order(problem1, variables)
+    assert greedy_variables == [x7, x6, x5, x4, x3, x2, x1, x0]
+    cells = GCAD(problem1, greedy_variables)
+    assert len(cells) == 139
+    mcells = merge(cells)
+    assert len(mcells) == 7 # mathematica: 7 cells in 1 second
+    cells = GCAD(problem2, greedy_variables)
+    assert len(cells) == 70
+    mcells = merge(cells)
+    assert len(mcells) == 4 # mathematica: 4 cells in 1 second
+
+@pytest.mark.slow
+@pytest.mark.intractable
+def test_pentabox_exd_symb():
+    # Two-loop pentabox from Figure 1(d) of [2009.07803]
+    x0, x1, x2, x3, x4, x5, x6, x7 = sp.symbols("x0 x1 x2 x3 x4 x5 x6 x7")
+    s12, s23, s34, s45, s15 = sp.symbols("s12 s23 s34 s45 s15")
+    F = -(s12*x0*x2*x4) - s45*x0*x3*x4 - s23*x1*x3*x4 - s12*x0*x2*x5 - s45*x0*x3*x5 - s23*x1*x3*x5 - s12*x0*x2*x6 - s45*x0*x3*x6 - s23*x1*x3*x6 - s12*x2*x4*x6 - s45*x3*x4*x6 - s15*x1*x5*x6 - s34*x2*x5*x6 - s12*x0*x2*x7 - s45*x0*x3*x7 - s23*x1*x3*x7 + (s15 - s23 + s45)*x1*x4*x7 + (-s12 + s34 + s45)*x2*x4*x7 - s45*x0*x5*x7 - s23*x1*x5*x7
+    problem1 = [F < 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0, s12 > 0, s23 < 0, s34 > 0, s45 > 0, s15 < 0]
+    problem2 = [F > 0, x0 > 0, x1 > 0, x2 > 0, x3 > 0, x4 > 0, x5 > 0, x6 > 0, x7 > 0, s12 > 0, s23 < 0, s34 > 0, s45 > 0, s15 < 0]
+    variables = [[s12, s23, s34, s45, s15], [x0, x1, x2, x3, x4, x5, x6, x7]]
+    greedy_variables = greedy_t1_order(problem1, variables) # TODO: example too slow to complete
+    #assert greedy_variables == [t, pp4, s, x6, x3, x5, x1, x0, x4, x2]
+    #selected_variables = [t, pp4, s, x6, x3, x5, x1, x0, x4, x2]
+    #cells = GCAD(problem1, selected_variables)
+    #assert len(cells) == 28794
+    #mcells = merge(cells)
+    #assert len(mcells) == 2
+
 def test_x2_minus_y():
     cells = GCAD([x**2-y>0], [x, y])
     assert len(cells) == 1
