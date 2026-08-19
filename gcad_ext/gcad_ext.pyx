@@ -5,6 +5,7 @@ from cpython.long cimport PyLong_AsLongAndOverflow, PyLong_FromString
 from cpython.unicode cimport PyUnicode_AsUTF8AndSize
 from cython import nogil
 from fractions import Fraction
+from libc.stddef cimport size_t
 from libc.stdlib cimport calloc, free
 from libcpp.vector cimport vector
 from sympy import Poly, Symbol
@@ -368,6 +369,7 @@ cdef extern from "gcad.cpp" nogil:
         vector[fmpz_mpoly_struct] positives,
         vector[vector[fmpz_mpoly_struct]] pr,
         int nvars,
+        size_t max_cells,
         fmpz_mpoly_ctx_struct ctx)
 
 def shortest_fraction_between(a: Fraction, b: Fraction) -> Fraction:
@@ -521,7 +523,10 @@ def SFRP_PR(polys: list[Poly], var: Symbol, variables: list[Symbol]) -> list[Pol
         fmpz_mpoly_ctx_clear(&ctx)
 
 def RSFC(
-    positives: list[Poly], pr: list[list[Poly]], varlist: list[Symbol]
+    positives: list[Poly],
+    pr: list[list[Poly]],
+    varlist: list[Symbol],
+    max_cells: int | None = None,
 ) -> list[list]:
     """Recursive Solution Formula Construction (Algorithm 3.5 of [S00])."""
     # Woof, what a hack!
@@ -536,6 +541,7 @@ def RSFC(
     cdef AxisBound *ab_cpp
     nvars = len(varlist)
     fmpz_mpoly_ctx_init(&ctx, nvars, ORD_LEX)
+    cdef size_t _max_cells = max_cells if max_cells is not None else 0
     try:
         for p in positives:
             fmpz_mpoly_init(&mp, &ctx)
@@ -550,7 +556,7 @@ def RSFC(
                 pr_k.push_back(mp)
             flint_pr.push_back(pr_k)
         with nogil:
-            result = _RSFC(flint_positives, flint_pr, nvars, ctx)
+            result = _RSFC(flint_positives, flint_pr, nvars, _max_cells, ctx)
         py_cells = []
         for ci in range(result.size()):
             cell = &result[ci]

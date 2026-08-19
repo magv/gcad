@@ -1,5 +1,6 @@
 from .gcad import (
     GCAD,
+    find_instance,
     relations_to_positives,
     GPROJ,
     RSFC,

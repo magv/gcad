@@ -221,6 +221,7 @@ _RSFC(const vector<fmpq_mpoly_struct> &positives,
       int nvars,
       Cell &cell,
       vector<Cell> &cells,
+      size_t max_cells,
       size_t &n_rejected,
       vector<size_t> &n_early_exits,
       fmpq_mpoly_ctx_struct &ctx)
@@ -298,6 +299,7 @@ _RSFC(const vector<fmpq_mpoly_struct> &positives,
               nvars,
               cell,
               cells,
+              max_cells,
               n_rejected,
               n_early_exits,
               ctx);
@@ -315,6 +317,7 @@ _RSFC(const vector<fmpq_mpoly_struct> &positives,
             cell.push_back(AxisBound{pt, PolyRoot_NONE, hi});
             recurse_at(&pt.q);
             cell.pop_back();
+            if (max_cells && (cells.size() >= max_cells)) return;
         }
         for (size_t i = 0; i + 1 < roots.size(); i++) {
             const auto &lo = roots[i];
@@ -343,6 +346,7 @@ _RSFC(const vector<fmpq_mpoly_struct> &positives,
             cell.push_back(AxisBound{mid, lo, hi});
             recurse_at(&mid.q);
             cell.pop_back();
+            if (max_cells && (cells.size() >= max_cells)) return;
         }
         {
             const auto &lo = roots.back();
@@ -365,6 +369,7 @@ vector<Cell>
 RSFC(const vector<fmpz_mpoly_struct> &positives,
      const vector<vector<fmpz_mpoly_struct>> &pr_fmpz,
      int nvars,
+     size_t max_cells,
      fmpz_mpoly_ctx_struct &zctx)
 {
     log_trace_scope("RSFC({}p, {}v)", positives.size(), nvars);
@@ -397,7 +402,7 @@ RSFC(const vector<fmpz_mpoly_struct> &positives,
     }
     Cell cell;
     _RSFC(
-        qpositives, qpr, 0, nvars, cell, cells, n_rejected, n_early_exits, ctx);
+        qpositives, qpr, 0, nvars, cell, cells, max_cells, n_rejected, n_early_exits, ctx);
     for (auto &qp : qpositives) {
         fmpq_mpoly_clear(&qp, &ctx);
     }

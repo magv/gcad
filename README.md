@@ -136,9 +136,17 @@ Generic projection (Algorithm 3.4 of [S00]). Return the list
 of $pr_i$, as polynomials with integer coefficients.
 
 <a id="gcad.RSFC"></a>
-**RSFC** (positives: *list[Poly]*, pr: *list[list[Poly]]*, varlist: *list[Symbol]*) → *list[list]*
+**RSFC** (positives: *list[Poly]*, pr: *list[list[Poly]]*, varlist: *list[Symbol]*, max_cells: *int | None*) → *list[list]*
 
 Recursive Solution Formula Construction (Algorithm 3.5 of [S00]).
+
+<a id="gcad.find_instance"></a>
+**find_instance** (relations: *Expr | list[Expr]*, varlist: *list[Symbol]*) → *list[Rational] | None*
+
+Find a rational point that lies inside a region defined by
+the conjunction of the given polynomial relations (using
+GCAD), and return its coordinates, or None, if no such point
+exists.
 
 <a id="gcad.greedy_mods_order"></a>
 **greedy_mods_order** (relations: *Expr | list[Expr]*, var_groups: *list[list[Symbol]]*) → *list[Symbol]*

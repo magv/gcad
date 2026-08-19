@@ -339,7 +339,10 @@ def isolate_real_roots(pr: list[sp.Poly], subs: dict, var: sp.Symbol) -> list[Po
 
 @auto_log_trace
 def RSFC(
-    positives: list[sp.Poly], pr: list[list[sp.Poly]], varlist: list[sp.Symbol]
+    positives: list[sp.Poly],
+    pr: list[list[sp.Poly]],
+    varlist: list[sp.Symbol],
+    max_cells: int | None = None,
 ) -> list[Cell]:
     """Recursive Solution Formula Construction (Algorithm 3.5 of [S00])."""
     def _RSFC(cell: Cell, positives: list[sp.Poly]):
@@ -369,6 +372,7 @@ def RSFC(
                     cell + [AxisBound(var, mid, None, hi)],
                     [p.subs({var: mid}) for p in positives],
                 )
+                if max_cells and len(all_cells) > max_cells: return
                 for i in range(len(roots) - 1):
                     lo = roots[i]
                     hi = roots[i + 1]
@@ -382,6 +386,7 @@ def RSFC(
                         cell + [AxisBound(var, mid, lo, hi)],
                         [p.subs({var: mid}) for p in positives],
                     )
+                    if max_cells and len(all_cells) > max_cells: return
                 lo = roots[-1]
                 mid = int(lo.value_hi) + 1
                 _RSFC(
@@ -446,6 +451,24 @@ def GCAD(relations: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]) -> list[C
     # At this point users of the API should consider merging
     # cells. We don't do that here.
     return cells
+
+@auto_log_trace
+def find_instance(
+    relations: sp.Expr | list[sp.Expr], varlist: list[sp.Symbol]
+) -> list[sp.Rational] | None:
+    """
+    Find a rational point that lies inside a region defined by
+    the conjunction of the given polynomial relations (using
+    GCAD), and return its coordinates, or None, if no such point
+    exists.
+    """
+    positives = relations_to_positives(relations, varlist)
+    pr = GPROJ(positives, varlist)
+    cells = RSFC(positives, pr, varlist, 1)
+    if len(cells) > 0:
+        return [ab.point for ab in cells[0]]
+    else:
+        return None
 
 @auto_log_trace
 def merge(cells: list[Cell]) -> list[Cell]:
